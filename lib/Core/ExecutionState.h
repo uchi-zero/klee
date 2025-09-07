@@ -19,6 +19,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/KDAlloc/kdalloc.h"
+#include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstIterator.h"
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
@@ -256,6 +257,9 @@ public:
   /// @brief Mapping MemoryObject addresses to refs used in the base_addrs map
   using base_mo_t = std::map<uint64_t, std::set<ref<Expr>>>;
   base_mo_t base_mos;
+
+  /// @brief Trace of this state
+  std::vector<InstructionInfo> trace;
 
 public:
 #ifdef KLEE_UNITTEST

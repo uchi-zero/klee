@@ -33,3 +33,6 @@ autom4te.cache/
 
 /build/
 /3rd/libcxx/
+
+# KLEE Output
+/klee-*/

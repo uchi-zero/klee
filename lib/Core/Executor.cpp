@@ -2096,6 +2096,7 @@ Function *Executor::getTargetFunction(Value *calledVal) {
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
+  state.trace.push_back(*ki->info);
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
     // Control flow
@@ -3783,6 +3784,13 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 
 void Executor::terminateState(ExecutionState &state,
                               StateTerminationType reason) {
+  llvm::outs() << "This is a new path\n";
+  for (auto t : state.trace) {
+    llvm::outs() << "file: " << t.file << ", line: " << t.line
+                 << ""
+                    "\n";
+  }
+
   if (replayKTest && replayPosition != replayKTest->numObjects) {
     klee_warning_once(replayKTest,
                       "replay did not consume all objects in test input.");

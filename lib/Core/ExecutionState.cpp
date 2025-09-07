@@ -116,6 +116,7 @@ ExecutionState *ExecutionState::branch() {
   falseState->setID();
   falseState->coveredNew = false;
   falseState->coveredLines.clear();
+  falseState->trace = this->trace;
 
   return falseState;
 }
