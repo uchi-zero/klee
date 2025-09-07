@@ -70,6 +70,13 @@ StackFrame::~StackFrame() { delete[] locals; }
 
 /***/
 
+void ExecutionState::printTrace(const std::string &prefix) {
+  llvm::outs() << prefix << "\n";
+  for (auto t : this->trace) {
+    llvm::outs() << "file: " << t.file << ", line: " << t.line << "\n";
+  }
+}
+
 ExecutionState::ExecutionState(KFunction *kf, MemoryManager *mm)
     : pc(kf->instructions), prevPC(pc) {
   pushFrame(nullptr, kf);

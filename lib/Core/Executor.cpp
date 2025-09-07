@@ -3784,12 +3784,8 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 
 void Executor::terminateState(ExecutionState &state,
                               StateTerminationType reason) {
-  llvm::outs() << "This is a new path\n";
-  for (auto t : state.trace) {
-    llvm::outs() << "file: " << t.file << ", line: " << t.line
-                 << ""
-                    "\n";
-  }
+
+  state.printTrace("this is a new path");
 
   if (replayKTest && replayPosition != replayKTest->numObjects) {
     klee_warning_once(replayKTest,
@@ -3932,6 +3928,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      StateTerminationType terminationType,
                                      const llvm::Twine &info,
                                      const char *suffix) {
+  state.printTrace("this path is exit with error:");
   std::string message = messaget.str();
   static std::set<std::pair<Instruction *, std::string>> emittedErrors;
   Instruction *lastInst;
