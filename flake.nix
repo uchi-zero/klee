@@ -25,8 +25,10 @@
           {
             packages = with pkgs;
               [
+                just
                 cmake
                 z3
+                gllvm
                 gperftools
                 sqlite
                 ninja

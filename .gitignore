@@ -36,3 +36,10 @@ autom4te.cache/
 
 # KLEE Output
 /klee-*/
+
+# Other examples
+/examples/*
+!/examples/get_sign/
+!/examples/regexp/
+!/examples/sort/
+!/examples/justfile

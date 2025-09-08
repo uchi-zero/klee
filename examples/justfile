@@ -1,0 +1,18 @@
+
+gclang_config := 'CC=gclang CXX=gclang++ CFLAGS="-g -O0 -Xclang -disable-O0-optnone"'
+
+lua version="5.4.8":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "lua" ]; then
+        wget https://www.lua.org/ftp/lua-{{version}}.tar.gz
+        tar zxf lua-{{version}}.tar.gz
+        mv lua-{{version}} lua
+        rm lua-{{version}}.tar.gz
+    fi
+    pushd lua
+        make clean
+        make -j $(nproc) posix {{gclang_config}}
+        make install INSTALL_TOP=$PWD/install
+        get-bc $PWD/install/bin/lua
+    popd

@@ -262,6 +262,7 @@ public:
   std::vector<InstructionInfo> trace;
 
 public:
+  void updateTrace(const InstructionInfo &info);
   void printTrace(const std::string &prefix);
 #ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests

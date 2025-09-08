@@ -2096,7 +2096,7 @@ Function *Executor::getTargetFunction(Value *calledVal) {
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
-  state.trace.push_back(*ki->info);
+  state.updateTrace(*ki->info);
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
     // Control flow
@@ -3928,7 +3928,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      StateTerminationType terminationType,
                                      const llvm::Twine &info,
                                      const char *suffix) {
-  state.printTrace("this path is exit with error:");
+  llvm::outs() << "this is a error state";
   std::string message = messaget.str();
   static std::set<std::pair<Instruction *, std::string>> emittedErrors;
   Instruction *lastInst;

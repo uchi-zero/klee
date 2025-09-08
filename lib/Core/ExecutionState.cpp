@@ -29,6 +29,7 @@
 #include <set>
 #include <sstream>
 #include <stdarg.h>
+#include <string>
 
 using namespace llvm;
 using namespace klee;
@@ -69,6 +70,23 @@ StackFrame::StackFrame(const StackFrame &s)
 StackFrame::~StackFrame() { delete[] locals; }
 
 /***/
+
+void ExecutionState::updateTrace(const InstructionInfo &info) {
+  const std::string &f = info.file;
+  if (f.empty())
+    return;
+  if (f.rfind("libc", 0) == 0)
+    return;
+
+  // // if info repeat the last one
+  if (!this->trace.empty()) {
+    const InstructionInfo &last = trace.back();
+    if (last.line == info.line)
+      return;
+  }
+
+  trace.push_back(info);
+}
 
 void ExecutionState::printTrace(const std::string &prefix) {
   llvm::outs() << prefix << "\n";
