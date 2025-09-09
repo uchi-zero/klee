@@ -1,27 +1,21 @@
-KLEE Symbolic Virtual Machine
-=============================
+# SUCOL
 
-[![Build Status](https://github.com/klee/klee/workflows/CI/badge.svg)](https://github.com/klee/klee/actions?query=workflow%3ACI)
-[![Build Status](https://api.cirrus-ci.com/github/klee/klee.svg)](https://cirrus-ci.com/github/klee/klee)
-[![Coverage](https://codecov.io/gh/klee/klee/branch/master/graph/badge.svg)](https://codecov.io/gh/klee/klee)
+requires: LLVM-13, clang-13, lit, gperftools, cmake, sqlite, ninja, z3
 
-`KLEE` is a symbolic virtual machine built on top of the LLVM compiler
-infrastructure. Currently, there are two primary components:
+```sh
+# get the repo
+git clone --recursive git@github.com:uchi-zero/klee.git
 
-  1. The core symbolic virtual machine engine; this is responsible for
-     executing LLVM bitcode modules with support for symbolic
-     values. This is comprised of the code in lib/.
+# build the klee-uclibc
+cd 3rd/klee-uclibc
+./configure --make-llvm-lib # --with-cc clang-13 --with-llvm-config llvm-config-13
+make -j $nproc
 
-  2. A POSIX/Linux emulation layer oriented towards supporting uClibc,
-     with additional support for making parts of the operating system
-     environment symbolic.
+# build klee
+cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DLLVMCC=$(which clang) -DLLVMCXX=$(which clang++) -DENABLE_SOLVER_Z3=ON -DENABLE_POSIX_RUNTIME=ON -DKLEE_UCLIBC_PATH=$PWD/3rd/klee-uclibc -DENABLE_UNIT_TESTS=OFF
 
-Additionally, there is a simple library for replaying computed inputs
-on native code (for closed programs). There is also a more complicated
-infrastructure for replaying the inputs generated for the POSIX/Linux
-emulation layer, which handles running native programs in an
-environment that matches a computed test input, including setting up
-files, pipes, environment variables, and passing command line
-arguments.
+```
 
-For further information, see the [webpage](https://klee-se.org/).
+## Add new test targets
+
+modify the `justfile` in the `examples/` directory.
