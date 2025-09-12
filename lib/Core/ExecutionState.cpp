@@ -78,21 +78,16 @@ void ExecutionState::updateTrace(const InstructionInfo &info) {
   if (f.rfind("libc", 0) == 0)
     return;
 
+  std::string str = f + ":" + std::to_string(info.line);
+
   // // if info repeat the last one
   if (!this->trace.empty()) {
-    const InstructionInfo &last = trace.back();
-    if (last.line == info.line)
+    const std::string &last = trace.back();
+    if (last == str)
       return;
   }
 
-  trace.push_back(info);
-}
-
-void ExecutionState::printTrace(const std::string &prefix) {
-  llvm::outs() << prefix << "\n";
-  for (auto t : this->trace) {
-    llvm::outs() << "file: " << t.file << ", line: " << t.line << "\n";
-  }
+  trace.push_back(str);
 }
 
 ExecutionState::ExecutionState(KFunction *kf, MemoryManager *mm)

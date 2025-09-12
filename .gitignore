@@ -31,6 +31,10 @@ autoconf/aclocal.m4
 autoconf/autom4te.cache/
 autom4te.cache/
 
+# LLVM IR files
+*.ll
+*.bc
+
 /build/
 /3rd/libcxx/
 

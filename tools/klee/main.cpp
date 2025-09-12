@@ -112,6 +112,11 @@ cl::opt<bool> WriteCov(
     cl::desc("Write coverage information for each test case (default=false)"),
     cl::cat(TestCaseCat));
 
+cl::opt<bool> WriteTrace(
+    "write-trace",
+    cl::desc("Write .trace files for each test case (default=false)"),
+    cl::cat(TestCaseCat));
+
 cl::opt<bool> WriteTestInfo(
     "write-test-info",
     cl::desc("Write additional test case information (default=false)"),
@@ -694,6 +699,17 @@ void KleeHandler::processTestCase(const ExecutionState &state,
           for (const auto &line : entry.second) {
             *f << *entry.first << ':' << line << '\n';
           }
+        }
+      }
+    }
+
+    if (WriteTrace) {
+      auto f = openTestFile("trace", test_id);
+      std::vector<std::string> trace;
+      m_interpreter->getTrace(state, trace);
+      if (f) {
+        for (const auto &t : trace) {
+          *f << t;
         }
       }
     }

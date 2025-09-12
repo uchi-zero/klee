@@ -3785,8 +3785,6 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 void Executor::terminateState(ExecutionState &state,
                               StateTerminationType reason) {
 
-  state.printTrace("this is a new path");
-
   if (replayKTest && replayPosition != replayKTest->numObjects) {
     klee_warning_once(replayKTest,
                       "replay did not consume all objects in test input.");
@@ -4897,6 +4895,13 @@ void Executor::getCoveredLines(
     const ExecutionState &state,
     std::map<const std::string *, std::set<unsigned>> &res) {
   res = state.coveredLines;
+}
+
+void Executor::getTrace(const ExecutionState &state,
+                        std::vector<std::string> &res) {
+  for (const auto &item : state.trace) {
+    res.push_back(item);
+  }
 }
 
 void Executor::doImpliedValueConcretization(ExecutionState &state, ref<Expr> e,

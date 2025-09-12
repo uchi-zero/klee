@@ -554,6 +554,9 @@ public:
       const ExecutionState &state,
       std::map<const std::string *, std::set<unsigned>> &res) override;
 
+  void getTrace(const ExecutionState &state,
+                std::vector<std::string> &res) override;
+
   Expr::Width getWidthForLLVMType(llvm::Type *type) const;
   size_t getAllocationAlignment(const llvm::Value *allocSite) const;
 

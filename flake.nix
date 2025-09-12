@@ -19,28 +19,28 @@
       perSystem = {pkgs, ...}: {
         formatter = pkgs.alejandra;
 
-        devShells.default =
-          pkgs.mkShell.override
-          {stdenv = pkgs.llvmPackages_13.stdenv;}
-          {
-            packages = with pkgs;
-              [
-                just
-                cmake
-                z3
-                gllvm
-                gperftools
-                sqlite
-                ninja
-                cppcheck
-                lit
-              ]
-              ++ (with pkgs.llvmPackages_13; [
-                libllvm
-                libcxx
-                clang-tools
-              ]);
+        devShells.default = pkgs.mkShell.override {stdenv = pkgs.llvmPackages_13.stdenv;} {
+          packages = with pkgs;
+            [
+              just
+              cmake
+              z3
+              gllvm
+              gperftools
+              sqlite
+              ninja
+              cppcheck
+              lit
+            ]
+            ++ (with pkgs.llvmPackages_13; [
+              libllvm
+              libcxx
+              clang-tools
+            ]);
+          env = {
+            OUT_DIR = "/tmp/out";
           };
+        };
       };
     };
 }

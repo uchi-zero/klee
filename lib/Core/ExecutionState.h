@@ -27,6 +27,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <vector>
 
 namespace klee {
@@ -259,11 +260,11 @@ public:
   base_mo_t base_mos;
 
   /// @brief Trace of this state
-  std::vector<InstructionInfo> trace;
+  std::vector<std::string> trace;
 
 public:
   void updateTrace(const InstructionInfo &info);
-  void printTrace(const std::string &prefix);
+
 #ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests
   ExecutionState() = default;

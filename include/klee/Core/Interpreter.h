@@ -156,6 +156,9 @@ public:
   virtual void
   getCoveredLines(const ExecutionState &state,
                   std::map<const std::string *, std::set<unsigned>> &res) = 0;
+
+  virtual void getTrace(const ExecutionState &state,
+                        std::vector<std::string> &res) = 0;
 };
 
 } // namespace klee
