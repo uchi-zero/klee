@@ -34,7 +34,7 @@ struct InstructionInfo {
   /// @brief Line number in generated assembly.ll.
   unsigned assemblyLine;
   /// @brief Source file name.
-  std::string file;
+  const std::string &file;
 
 public:
   InstructionInfo(unsigned id, const std::string &file, unsigned line,

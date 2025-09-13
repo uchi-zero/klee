@@ -73,7 +73,7 @@ StackFrame::~StackFrame() { delete[] locals; }
 /***/
 
 void ExecutionState::updateTrace(const InstructionInfo &info) {
-  const std::string &f = info.file;
+  auto f = info.file;
   if (f.empty())
     return;
 
