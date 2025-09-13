@@ -30,6 +30,7 @@
 #include <sstream>
 #include <stdarg.h>
 #include <string>
+#include <string_view>
 
 using namespace llvm;
 using namespace klee;
@@ -75,8 +76,13 @@ void ExecutionState::updateTrace(const InstructionInfo &info) {
   const std::string &f = info.file;
   if (f.empty())
     return;
-  if (f.rfind("libc", 0) == 0)
-    return;
+
+  std::array<std::string_view, 3> prefixes = {"libc", "runtime/POSIX", "/nix"};
+  for (const auto& prefix : prefixes) {
+      if (f.rfind(prefix, 0) == 0) {
+          return;
+      }
+  }
 
   std::string str = f + ":" + std::to_string(info.line);
 

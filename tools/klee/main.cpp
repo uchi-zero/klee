@@ -112,10 +112,25 @@ cl::opt<bool> WriteCov(
     cl::desc("Write coverage information for each test case (default=false)"),
     cl::cat(TestCaseCat));
 
-cl::opt<bool> WriteTrace(
+enum class TraceWriteMode {
+  None,
+  All,
+  Timeout,
+  Error
+}; // TODO: handle other logics
+
+cl::opt<TraceWriteMode> WriteTrace(
     "write-trace",
     cl::desc("Write .trace files for each test case (default=false)"),
-    cl::cat(TestCaseCat));
+    cl::values(clEnumValN(TraceWriteMode::None, "none",
+                          "Do not write trace files"),
+               clEnumValN(TraceWriteMode::All, "all",
+                          "Write trace files for all test cases"),
+               clEnumValN(TraceWriteMode::Timeout, "timeout",
+                          "Write trace files only for timeout cases"),
+               clEnumValN(TraceWriteMode::Error, "error",
+                          "Write trace files only for error cases")),
+    cl::init(TraceWriteMode::None), cl::cat(TestCaseCat));
 
 cl::opt<bool> WriteTestInfo(
     "write-test-info",
@@ -703,15 +718,27 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       }
     }
 
-    if (WriteTrace) {
+    switch (WriteTrace) {
+    case TraceWriteMode::None:
+      // Do nothing
+      break;
+    case TraceWriteMode::All: {
       auto f = openTestFile("trace", test_id);
       std::vector<std::string> trace;
       m_interpreter->getTrace(state, trace);
       if (f) {
         for (const auto &t : trace) {
-          *f << t;
+          *f << t << '\n';
         }
       }
+      break;
+    }
+    case TraceWriteMode::Timeout:
+      // Write trace only for timeout cases
+      break;
+    case TraceWriteMode::Error:
+      // Write trace only for error cases
+      break;
     }
 
     if (m_numGeneratedTests == MaxTests)
