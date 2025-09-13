@@ -26,6 +26,8 @@
               cmake
               z3
               gllvm
+              wllvm
+              python312Packages.distutils
               gperftools
               sqlite
               ninja

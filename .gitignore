@@ -35,8 +35,8 @@ autom4te.cache/
 *.ll
 *.bc
 
-/build/
-/3rd/libcxx/
+# Third-party dependencies
+/3rd/
 
 # KLEE Output
 /klee-*/
