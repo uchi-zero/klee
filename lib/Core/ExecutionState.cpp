@@ -30,7 +30,6 @@
 #include <sstream>
 #include <stdarg.h>
 #include <string>
-#include <string_view>
 
 using namespace llvm;
 using namespace klee;
