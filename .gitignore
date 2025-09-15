@@ -39,7 +39,10 @@ autom4te.cache/
 /3rd/
 
 # KLEE Output
-/klee-*/
+**/klee-*/
+
+# Cache files
+/.cache/
 
 # Other examples
 /examples/*

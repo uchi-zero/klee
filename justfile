@@ -25,9 +25,12 @@ gtest version="1.11.0":
         mv googletest-release-{{version}} 3rd/gtest
     fi
 
-klee: uclibc libcxx gtest
-    cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DENABLE_SOLVER_Z3=ON -DENABLE_POSIX_RUNTIME=ON -DKLEE_UCLIBC_PATH=$PWD/3rd/klee-uclibc -DENABLE_UNIT_TESTS=ON -DGTEST_SRC_DIR=$PWD/3rd/gtest -DLLVMCC=$(which clang) -DLLVMCXX=$(which clang++) -DENABLE_KLEE_LIBCXX=ON -DKLEE_LIBCXX_DIR=$PWD/3rd/libcxx/libc++-install-130/ -DKLEE_LIBCXX_INCLUDE_DIR=$PWD/3rd/libcxx/libc++-install-130/include/c++/v1/
+klee: uclibc gtest
+    cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DENABLE_SOLVER_Z3=ON -DENABLE_POSIX_RUNTIME=ON -DKLEE_UCLIBC_PATH=$PWD/3rd/klee-uclibc -DENABLE_UNIT_TESTS=ON -DGTEST_SRC_DIR=$PWD/3rd/gtest -DLLVMCC=$(which clang) -DLLVMCXX=$(which clang++)
     cmake --build build
 
 rebuild:
     cmake --build build
+
+clean:
+    rm -rf klee-*

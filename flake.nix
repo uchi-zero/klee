@@ -30,6 +30,7 @@
               python312Packages.distutils
               gperftools
               sqlite
+              libxml2
               ninja
               cppcheck
               lit
