@@ -557,6 +557,9 @@ public:
   void getTrace(const ExecutionState &state,
                 std::vector<std::string> &res) override;
 
+  void getRawConstraints(const ExecutionState &state,
+                           std::vector<std::pair<std::string, std::string>> &res) override;
+
   Expr::Width getWidthForLLVMType(llvm::Type *type) const;
   size_t getAllocationAlignment(const llvm::Value *allocSite) const;
 

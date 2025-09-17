@@ -49,4 +49,5 @@ autom4te.cache/
 !/examples/get_sign/
 !/examples/regexp/
 !/examples/sort/
+!/examples/hard_switch/
 !/examples/justfile

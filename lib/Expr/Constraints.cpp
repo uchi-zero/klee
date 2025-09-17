@@ -16,6 +16,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <llvm/Support/raw_ostream.h>
 #include <map>
 
 using namespace klee;

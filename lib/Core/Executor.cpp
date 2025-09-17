@@ -4903,6 +4903,12 @@ void Executor::getTrace(const ExecutionState &state,
   }
 }
 
+void Executor::getRawConstraints(const ExecutionState &state, std::vector<std::pair<std::string, std::string>> &res) {
+for (const auto &item : state.rawConstraints) {
+    res.push_back(item);
+  }
+}
+
 void Executor::doImpliedValueConcretization(ExecutionState &state, ref<Expr> e,
                                             ref<ConstantExpr> value) {
   abort(); // FIXME: Broken until we sort out how to do the write back.

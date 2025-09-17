@@ -132,6 +132,23 @@ cl::opt<TraceWriteMode> WriteTrace(
                           "Write trace files only for error cases")),
     cl::init(TraceWriteMode::None), cl::cat(TestCaseCat));
 
+enum class RawConstraintWriteMode {
+  None,
+  All,
+  ConstraintOnly
+}; // TODO: handle other logics
+
+cl::opt<RawConstraintWriteMode> WriteConstraints(
+    "write-raw-constraints",
+    cl::desc("Write constraints to a single file (default=none)"),
+    cl::values(clEnumValN(RawConstraintWriteMode::None, "none",
+                          "Do not write raw constraints"),
+               clEnumValN(RawConstraintWriteMode::All, "all",
+                          "Write raw constraints and corresponding file locations"),
+               clEnumValN(RawConstraintWriteMode::ConstraintOnly, "constraint-only",
+                          "Write raw constraints only")),
+    cl::init(RawConstraintWriteMode::None), cl::cat(TestCaseCat));
+
 cl::opt<bool> WriteTestInfo(
     "write-test-info",
     cl::desc("Write additional test case information (default=false)"),
@@ -739,6 +756,34 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     case TraceWriteMode::Error:
       // Write trace only for error cases
       break;
+    }
+
+    switch (WriteConstraints) {
+        case RawConstraintWriteMode::None: {
+            break;
+        }
+        case RawConstraintWriteMode::All: {
+            auto f = openTestFile("raw", test_id);
+            std::vector<std::pair<std::string, std::string>> rawConstraints;
+            m_interpreter->getRawConstraints(state, rawConstraints);
+            if (f) {
+              for (const auto &rc : rawConstraints) {
+                *f << rc.first << " @ " << rc.second << "\n";
+              }
+            }
+            break;
+        }
+        case RawConstraintWriteMode::ConstraintOnly: {
+            auto f = openTestFile("raw", test_id);
+            std::vector<std::pair<std::string, std::string>> rawConstraints;
+            m_interpreter->getRawConstraints(state, rawConstraints);
+            if (f) {
+              for (const auto &rc : rawConstraints) {
+                *f << rc.second << "\n";
+              }
+            }
+            break;
+        }
     }
 
     if (m_numGeneratedTests == MaxTests)

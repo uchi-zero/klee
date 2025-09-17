@@ -71,21 +71,27 @@ StackFrame::~StackFrame() { delete[] locals; }
 
 /***/
 
+bool ExecutionState::validFile(const std::string &filename) {
+    std::array<std::string_view, 3> prefixes = {"libc", "runtime/", "/nix"};
+    for (const auto& prefix : prefixes) {
+        if (filename.rfind(prefix, 0) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void ExecutionState::updateTrace(const InstructionInfo &info) {
   auto f = info.file;
   if (f.empty())
     return;
 
-  std::array<std::string_view, 3> prefixes = {"libc", "runtime/POSIX", "/nix"};
-  for (const auto& prefix : prefixes) {
-      if (f.rfind(prefix, 0) == 0) {
-          return;
-      }
-  }
+  if (!validFile(f))
+    return;
 
   std::string str = f + ":" + std::to_string(info.line);
 
-  // // if info repeat the last one
+  // if info repeat the last one
   if (!this->trace.empty()) {
     const std::string &last = trace.back();
     if (last == str)
@@ -142,6 +148,7 @@ ExecutionState *ExecutionState::branch() {
   falseState->coveredNew = false;
   falseState->coveredLines.clear();
   falseState->trace = this->trace;
+  falseState->rawConstraints = this->rawConstraints;
 
   return falseState;
 }
@@ -403,6 +410,14 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 }
 
 void ExecutionState::addConstraint(ref<Expr> e) {
+  auto info = this->pc->info;
+  if (validFile(info->file)) {
+        std::string location = info->file + ":" + std::to_string(info->line);
+        std::string constraint;
+        llvm::raw_string_ostream rso(constraint);
+        rso << e;
+        this->rawConstraints.push_back(std::make_pair(location, rso.str()));
+    }
   ConstraintManager c(constraints);
   c.addConstraint(e);
 }

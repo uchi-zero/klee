@@ -28,6 +28,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace klee {
@@ -262,7 +263,11 @@ public:
   /// @brief Trace of this state
   std::vector<std::string> trace;
 
+  /// @brief unoptimized constraints associated with this state, <file location, constraint>
+  std::vector<std::pair<std::string, std::string>> rawConstraints;
+
 public:
+  static bool validFile(const std::string &filename);
   void updateTrace(const InstructionInfo &info);
 
 #ifdef KLEE_UNITTEST
