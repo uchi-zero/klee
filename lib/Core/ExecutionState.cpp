@@ -72,9 +72,9 @@ StackFrame::~StackFrame() { delete[] locals; }
 /***/
 
 bool ExecutionState::validFile(const std::string &filename) {
-    std::array<std::string_view, 3> prefixes = {"libc", "runtime/", "/nix"};
-    for (const auto& prefix : prefixes) {
-        if (filename.rfind(prefix, 0) == 0) {
+    std::array<std::string_view, 4> patterns = {"libc", "runtime/POSIX", "runtime/Intrinsic", "/nix/"};
+    for (const auto& pattern : patterns) {
+        if (filename.find(pattern, 0) != std::string::npos) {
             return false;
         }
     }

@@ -20,6 +20,7 @@
         formatter = pkgs.alejandra;
 
         devShells.default = pkgs.mkShell.override {stdenv = pkgs.llvmPackages_13.stdenv;} {
+          hardeningDisable = ["fortify"];
           packages = with pkgs;
             [
               just
@@ -27,6 +28,7 @@
               z3
               gllvm
               wllvm
+              linuxHeaders
               python312Packages.distutils
               gperftools
               sqlite
