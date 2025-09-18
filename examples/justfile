@@ -5,7 +5,7 @@ gnumake version="4.4":
     #!/usr/bin/env bash
     set -euxo pipefail
     if [ ! -d "gnumake" ]; then
-        wget https://mirrors.ibiblio.org/gnu/make/make-{{version}}.tar.gz
+        curl -fL -O https://mirrors.ibiblio.org/gnu/make/make-{{version}}.tar.gz
         tar zxf make-{{version}}.tar.gz
         mv make-{{version}} gnumake
         rm make-{{version}}.tar.gz
@@ -21,7 +21,7 @@ lua version="5.4.8":
     #!/usr/bin/env bash
     set -euxo pipefail
     if [ ! -d "lua" ]; then
-        wget https://www.lua.org/ftp/lua-{{version}}.tar.gz
+        curl -fL -O https://www.lua.org/ftp/lua-{{version}}.tar.gz
         tar zxf lua-{{version}}.tar.gz
         mv lua-{{version}} lua
         rm lua-{{version}}.tar.gz
