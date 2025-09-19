@@ -41,9 +41,13 @@
               libllvm
               libcxx
               clang-tools
+            ])
+            ++ (with pkgs.python312Packages; [
+              distutils
+              tabulate
             ]);
           env = {
-            OUT_DIR = "/tmp/out";
+            OUT_DIR = "/tmp/klee-out";
           };
         };
       };
