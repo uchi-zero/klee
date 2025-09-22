@@ -51,3 +51,6 @@ autom4te.cache/
 !/examples/sort/
 !/examples/hard_switch/
 !/examples/justfile
+
+# Python related files
+__pycache__/

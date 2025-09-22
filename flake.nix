@@ -26,6 +26,7 @@
               just
               cmake
               z3
+              stp
               gllvm
               wllvm
               linuxHeaders
@@ -45,8 +46,10 @@
             ++ (with pkgs.python312Packages; [
               distutils
               tabulate
+              z3-solver
             ]);
           env = {
+            # Z3_LIBRARY_PATH = "${pkgs.z3.dev}/lib";
             OUT_DIR = "/tmp/klee-out";
           };
         };

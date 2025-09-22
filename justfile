@@ -26,11 +26,11 @@ gtest version="1.11.0":
     fi
 
 klee: uclibc gtest
-    cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DENABLE_SOLVER_Z3=ON -DENABLE_POSIX_RUNTIME=ON -DKLEE_UCLIBC_PATH=$PWD/3rd/klee-uclibc -DENABLE_UNIT_TESTS=ON -DGTEST_SRC_DIR=$PWD/3rd/gtest -DLLVMCC=$(which clang) -DLLVMCXX=$(which clang++)
+    cmake -B build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DENABLE_SOLVER_Z3=ON -DENABLE_SOLVER_STP=ON -DENABLE_POSIX_RUNTIME=ON -DKLEE_UCLIBC_PATH=$PWD/3rd/klee-uclibc -DENABLE_UNIT_TESTS=ON -DGTEST_SRC_DIR=$PWD/3rd/gtest -DLLVMCC=$(which clang) -DLLVMCXX=$(which clang++)
     cmake --build build
 
 rebuild:
     cmake --build build
 
 clean:
-    rm -rf klee-*
+    rm -rf /tmp/klee-out/*
