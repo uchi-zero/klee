@@ -11,6 +11,7 @@
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
 #include "klee/Support/OptionCategories.h"
+#include "klee/Extra/DeltaTimeLogger.h"
 
 #include <csignal>
 
@@ -246,6 +247,7 @@ bool Z3SolverImpl::internalRunSolver(
     std::vector<std::vector<unsigned char>> *values, bool &hasSolution) {
 
   TimerStatIncrementer t(stats::queryTime);
+  DeltaTimeLogger dt("z3.csv");
   // NOTE: Z3 will switch to using a slower solver internally if push/pop are
   // used so for now it is likely that creating a new solver each time is the
   // right way to go until Z3 changes its behaviour.
@@ -313,8 +315,10 @@ bool Z3SolverImpl::internalRunSolver(
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
       runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
     if (hasSolution) {
+        dt.lap("unsat");
       ++stats::queriesInvalid;
     } else {
+        dt.lap("sat");
       ++stats::queriesValid;
     }
     return true; // success
