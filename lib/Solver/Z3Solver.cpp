@@ -323,8 +323,18 @@ bool Z3SolverImpl::internalRunSolver(
     }
     return true; // success
   }
-  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED) {
+  else if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED) {
     raise(SIGINT);
+  }
+  else if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_TIMEOUT) {
+      std::ofstream file("timeout.queries", std::ios::app);
+      if (file) {
+        file << "; start Z3 query\n";
+        file << Z3_solver_to_string(builder->ctx, theSolver);
+        file << "(check-sat)\n";
+        file << "(reset)\n";
+        file << "; end Z3 query\n\n";
+      }
   }
   return false; // failed
 }
