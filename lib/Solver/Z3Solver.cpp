@@ -327,14 +327,17 @@ bool Z3SolverImpl::internalRunSolver(
     raise(SIGINT);
   }
   else if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_TIMEOUT) {
-      std::ofstream file("timeout.queries", std::ios::app);
-      if (file) {
-        file << "; start Z3 query\n";
-        file << Z3_solver_to_string(builder->ctx, theSolver);
-        file << "(check-sat)\n";
-        file << "(reset)\n";
-        file << "; end Z3 query\n\n";
+      std::string path = "timeout.queries";
+      std::string error;
+      auto file = klee_append_output_file(path, error);
+      if (!file) {
+          klee_error("Could not open file %s : %s", path.c_str(), error.c_str());
       }
+      *file << "; start Z3 query\n";
+      *file << Z3_solver_to_string(builder->ctx, theSolver);
+      *file << "(check-sat)\n";
+      *file << "(reset)\n";
+      *file << "; end Z3 query\n\n";
   }
   return false; // failed
 }

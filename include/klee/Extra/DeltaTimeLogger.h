@@ -12,6 +12,8 @@
 
 #include "klee/Statistics/Statistics.h"
 #include "klee/Support/Timer.h"
+#include "klee/Support/FileHandling.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include <string>
 #include <iostream>
@@ -34,12 +36,14 @@ public:
 
   void lap(std::string status) {
     auto delta = timer.delta().toMicroseconds();
-    std::ofstream file(this->filePath, std::ios::app);
-    if (!file)
-        return;
+    std::string error;
+    auto file = klee_append_output_file(filePath, error);
+    if (!file) {
+      klee_error("Could not open file %s : %s", filePath.c_str(), error.c_str());
+    }
     auto now = std::chrono::system_clock::now();
     std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-    file << now_time << "," << status << "," << delta << "\n";
+    *file << now_time << "," << status << "," << delta << "\n";
   }
 };
 } // namespace klee
