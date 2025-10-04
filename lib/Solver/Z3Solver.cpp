@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <memory>
+#include <filesystem>
 
 namespace {
 // NOTE: Very useful for debugging Z3 behaviour. These files can be given to
@@ -42,6 +43,12 @@ llvm::cl::opt<std::string> Z3QueryDumpFile(
     "debug-z3-dump-queries", llvm::cl::init(""),
     llvm::cl::desc(
         "Dump Z3's representation of the query to the specified path"),
+    llvm::cl::cat(klee::SolvingCat));
+
+llvm::cl::opt<std::string> Z3StatsOutputDir(
+    "debug-z3-stats-output-dir", llvm::cl::init("./"),
+    llvm::cl::desc(
+        "Dump Z3's statistics to the specified directory"),
     llvm::cl::cat(klee::SolvingCat));
 
 llvm::cl::opt<bool> Z3ValidateModels(
@@ -246,8 +253,10 @@ bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char>> *values, bool &hasSolution) {
 
+  std::filesystem::path outDir{Z3StatsOutputDir.getValue()};
+  std::string full = (outDir / "z3.csv").string();
   TimerStatIncrementer t(stats::queryTime);
-  DeltaTimeLogger dt("z3.csv");
+  DeltaTimeLogger dt(full);
   // NOTE: Z3 will switch to using a slower solver internally if push/pop are
   // used so for now it is likely that creating a new solver each time is the
   // right way to go until Z3 changes its behaviour.
@@ -327,11 +336,12 @@ bool Z3SolverImpl::internalRunSolver(
     raise(SIGINT);
   }
   else if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_TIMEOUT) {
-      std::string path = "timeout.queries";
+      std::filesystem::path outDir{Z3StatsOutputDir.getValue()};
+      std::string full = (outDir / "z3.csv").string();
       std::string error;
-      auto file = klee_append_output_file(path, error);
+      auto file = klee_append_output_file(full, error);
       if (!file) {
-          klee_error("Could not open file %s : %s", path.c_str(), error.c_str());
+          klee_error("Could not open file %s : %s", full.c_str(), error.c_str());
       }
       *file << "; start Z3 query\n";
       *file << Z3_solver_to_string(builder->ctx, theSolver);
