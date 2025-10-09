@@ -51,15 +51,29 @@ openssl version="3.5.4":
 curl version="8.16.0":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "curl" ]; then
+    install_dir=$PWD/curl/install
+    src_dir=$PWD/curl/src
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p $PWD/curl
         curl -fL -O https://curl.se/download/curl-{{version}}.tar.gz
         tar zxf curl-{{version}}.tar.gz
-        mv curl-{{version}} curl
+        mv curl-{{version}} $src_dir
         rm curl-{{version}}.tar.gz
     fi
-    pushd curl
-        {{gclang_config}} ./configure --prefix=$PWD/install --with-openssl --with-gnutls
+    pushd $src_dir
+        make clean
+        {{gclang_config}} ./configure --prefix=$install_dir \
+            --without-libpsl   \
+            --without-librtmp  \
+            --without-libgsasl \
+            --without-ssl      \
+            --without-zlib     \
+            --without-brotli   \
+            --without-zstd     \
+            --disable-pthreads \
+            --disable-rt       \
+            --disable-shared
         make -j $(nproc)
         make -j $(nproc) install
-        get-bc $PWD/install/bin/curl
     popd
+    get-bc $install_dir/bin/curl
