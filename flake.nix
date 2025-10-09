@@ -33,6 +33,8 @@
               gperftools
               sqlite
               libxml2
+              openssl
+              libpsl
               ninja
               cppcheck
               lit

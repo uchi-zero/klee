@@ -47,3 +47,19 @@ openssl version="3.5.4":
         make -j $(nproc)
         make -j $(nproc) install
     popd
+
+curl version="8.16.0":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "curl" ]; then
+        curl -fL -O https://curl.se/download/curl-{{version}}.tar.gz
+        tar zxf curl-{{version}}.tar.gz
+        mv curl-{{version}} curl
+        rm curl-{{version}}.tar.gz
+    fi
+    pushd curl
+        {{gclang_config}} ./configure --prefix=$PWD/install --with-openssl --with-gnutls
+        make -j $(nproc)
+        make -j $(nproc) install
+        get-bc $PWD/install/bin/curl
+    popd
