@@ -48,7 +48,7 @@ def preprocess(klee_stats_file: str, time_bucket_size: str):
 
     # Create a complete range of time buckets and reindex
     klee_stats = (
-        klee_stats.set_index("TimeBucket").reindex(all_buckets).fillna(0).reset_index()
+        klee_stats.set_index("TimeBucket").reindex(all_buckets).ffill().reset_index()
     )
 
     # Map time buckets to sequential numbers from 0
@@ -60,7 +60,7 @@ def preprocess(klee_stats_file: str, time_bucket_size: str):
             klee_stats[delta_col_name] = klee_stats[col].diff()
             klee_stats.loc[0, delta_col_name] = klee_stats[col].iloc[0]
 
-    print(klee_stats.head())
+    klee_stats.to_csv(klee_stats_file.split(".")[0] + ".processed.csv")
 
     return klee_stats
 
