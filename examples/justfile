@@ -17,6 +17,27 @@ gnumake version="4.4":
         get-bc $PWD/install/bin/make
     popd
 
+nasm version="2.16.02":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    install_dir=$PWD/nasm/install
+    src_dir=$PWD/nasm/src
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p nasm
+        curl -fL -O https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-{{version}}.tar.gz
+        tar zxf nasm-{{version}}.tar.gz
+        mv nasm-nasm-{{version}} $src_dir
+        rm nasm-{{version}}.tar.gz
+    fi
+    pushd $src_dir
+        sh autogen.sh
+        {{gclang_config}} ./configure --prefix=$install_dir --disable-shared
+        make clean
+        make -j $(nproc)
+        make install
+        get-bc $install_dir/bin/nasm
+    popd
+
 lua version="5.4.8":
     #!/usr/bin/env bash
     set -euxo pipefail
