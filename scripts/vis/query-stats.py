@@ -17,22 +17,24 @@ klee_stats_file = "lua-1.csv"
 query_stats_file = "z3-lua.csv"
 time_bucket_size = "30min"
 
+
 @click.group()
 def cli():
     """Main CLI."""
     pass
 
+
 @cli.command()
 @click.option("--time-bucket-size", type=str, default="30min")
 @click.argument("query_stats_file", type=click.Path(exists=True))
 def stats(query_stats_file, time_bucket_size):
-    query_stats = pd.read_csv(query_stats_file, header=None, names=["timestamp", "status", "span"])
+    query_stats = pd.read_csv(
+        query_stats_file, header=None, names=["timestamp", "status", "span"]
+    )
 
     # convert the timestamp to datetime and floor to time bucket size
     query_stats["datetime"] = pd.to_datetime(query_stats["timestamp"], unit="s")
     query_stats["time_bucket"] = query_stats["datetime"].dt.floor(time_bucket_size)
-
-    num_time_buckets = len(query_stats["time_bucket"].unique())
 
     # count the samples of each bucket
     counts = query_stats.groupby("time_bucket", sort=False).size().values
@@ -48,7 +50,9 @@ def stats(query_stats_file, time_bucket_size):
 @click.argument("query_stats_file", type=click.Path(exists=True))
 @click.argument("output_file", type=click.Path(exists=False))
 def violin(query_stats_file, time_bucket_size, output_file):
-    query_stats = pd.read_csv(query_stats_file, header=None, names=["timestamp", "status", "span"])
+    query_stats = pd.read_csv(
+        query_stats_file, header=None, names=["timestamp", "status", "span"]
+    )
 
     # convert the timestamp to datetime and floor to time bucket size
     query_stats["datetime"] = pd.to_datetime(query_stats["timestamp"], unit="s")
@@ -115,6 +119,7 @@ def violin(query_stats_file, time_bucket_size, output_file):
     plt.tight_layout()
     plt.savefig(output_file)
     plt.close()
+
 
 if __name__ == "__main__":
     cli()

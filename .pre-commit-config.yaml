@@ -11,3 +11,13 @@ repos:
       rev: v13.0.1
       hooks:
           - id: clang-format
+    - repo: https://github.com/astral-sh/ruff-pre-commit
+      rev: v0.14.0
+      hooks:
+          # Run the linter.
+          - id: ruff-check
+            args: [--fix]
+            files: scripts/vis/*
+          # Run the formatter.
+          - id: ruff-format
+            files: scripts/vis/*
