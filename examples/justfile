@@ -41,17 +41,20 @@ nasm version="2.16.02":
 lua version="5.4.8":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "lua" ]; then
+    mkdir -p lua
+    install_dir=$PWD/lua/install
+    src_dir=$PWD/lua/src
+    if [ ! -d "$src_dir" ]; then
         curl -fL -O https://www.lua.org/ftp/lua-{{version}}.tar.gz
         tar zxf lua-{{version}}.tar.gz
-        mv lua-{{version}} lua
+        mv lua-{{version}} $src_dir
         rm lua-{{version}}.tar.gz
     fi
-    pushd lua
+    pushd $src_dir
         make clean
         make -j $(nproc) posix {{gclang_config}}
-        make install INSTALL_TOP=$PWD/install
-        get-bc $PWD/install/bin/lua
+        make install INSTALL_TOP=$install_dir
+        get-bc $install_dir/bin/lua
     popd
 
 openssl version="3.5.4":
