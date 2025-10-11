@@ -1,21 +1,34 @@
 
 gclang_config := 'CC=gclang CXX=gclang++ CFLAGS="-g -O0 -Xclang -disable-O0-optnone"'
-cov_config := '"-g -fprofile-instr-generate -fcoverage-mapping"'
+cov_config := 'CFLAGS="-g -fprofile-instr-generate -fcoverage-mapping"'
 
 gnumake version="4.4":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "gnumake" ]; then
+    src_dir=$PWD/gnumake/src
+    install_dir=$PWD/gnumake/install
+    cov_dir=$PWD/gnumake/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir gnumake
         curl -fL -O https://mirrors.ibiblio.org/gnu/make/make-{{version}}.tar.gz
         tar zxf make-{{version}}.tar.gz
-        mv make-{{version}} gnumake
+        mv make-{{version}} $src_dir
         rm make-{{version}}.tar.gz
     fi
-    pushd gnumake
-        ./configure {{gclang_config}} --prefix=$PWD/install
+    # make binary for symbolic execution
+    pushd $src_dir
+        {{gclang_config}} ./configure --prefix=$install_dir
+        make clean
         make -j $(nproc)
         make install
-        get-bc $PWD/install/bin/make
+        get-bc $install_dir/bin/make
+    popd
+    # make binary for coverage analysis
+    pushd $src_dir
+        {{cov_config}} ./configure --prefix=$cov_dir
+        make clean
+        make -j $(nproc)
+        make install
     popd
 
 nasm version="2.16.02":
