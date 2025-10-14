@@ -21,3 +21,8 @@ repos:
           # Run the formatter.
           - id: ruff-format
             files: scripts/vis/*
+    -   repo: https://github.com/koalaman/shellcheck-precommit
+        rev: v0.11.0
+        hooks:
+        -   id: shellcheck
+            args: ["--severity=error"]
