@@ -78,6 +78,7 @@ public:
   HANDLER(handleAssert);
   HANDLER(handleAssertFail);
   HANDLER(handleAssume);
+  HANDLER(handleAssumeIfPossible);
   HANDLER(handleCalloc);
   HANDLER(handleCheckMemoryAccess);
   HANDLER(handleDefineFixedObject);

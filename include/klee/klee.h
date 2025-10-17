@@ -106,6 +106,7 @@ unsigned klee_is_replay(void);
    and may have peculiar semantics. */
 
 void klee_assume(uintptr_t condition);
+void klee_assume_if_possible(uintptr_t condition);
 void klee_warning(const char *message);
 void klee_warning_once(const char *message);
 void klee_prefer_cex(void *object, uintptr_t condition);
