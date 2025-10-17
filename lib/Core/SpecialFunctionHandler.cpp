@@ -95,6 +95,7 @@ static constexpr std::array handlerInfo = {
     add("calloc", handleCalloc, true),
     add("free", handleFree, false),
     add("klee_assume", handleAssume, false),
+    add("klee_assume_if_possible", handleAssumeIfPossible, false),
     add("klee_check_memory_access", handleCheckMemoryAccess, false),
     add("klee_get_valuef", handleGetValue, true),
     add("klee_get_valued", handleGetValue, true),
@@ -489,6 +490,28 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
   if (res) {
     executor.terminateStateOnUserError(
         state, "invalid klee_assume call (provably false)", !SilentKleeAssume);
+  } else {
+    executor.addConstraint(state, e);
+  }
+}
+
+void SpecialFunctionHandler::handleAssumeIfPossible(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 &&
+         "invalid number of arguments to klee_assume_if_possible");
+
+  ref<Expr> e = arguments[0];
+
+  if (e->getWidth() != Expr::Bool)
+    e = NeExpr::create(e, ConstantExpr::create(0, e->getWidth()));
+
+  bool res;
+  bool success __attribute__((unused)) = executor.solver->mustBeFalse(
+      state.constraints, e, res, state.queryMetaData);
+  assert(success && "FIXME: Unhandled solver failure");
+  if (res) {
+    klee_warning_once("klee_assume_if_possible: will not be assumed");
   } else {
     executor.addConstraint(state, e);
   }
