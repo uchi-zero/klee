@@ -511,7 +511,12 @@ void SpecialFunctionHandler::handleAssumeIfPossible(
       state.constraints, e, res, state.queryMetaData);
   assert(success && "FIXME: Unhandled solver failure");
   if (res) {
-    klee_warning_once("klee_assume_if_possible: will not be assumed");
+    std::string constraintLog;
+    executor.getConstraintLog(state, constraintLog,
+                              Interpreter::LogType::KQUERY);
+    klee_warning("klee_assume_if_possible: will not be assumed\n"
+                 "Current constraints:\n%s",
+                 constraintLog.c_str());
   } else {
     executor.addConstraint(state, e);
   }
