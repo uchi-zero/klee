@@ -2,9 +2,20 @@
 #include <stdio.h>
 #include <string.h>
 
-int main() {
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    fprintf(stderr, "usage: %s <input-file>\n", argv[0]);
+    return 1;
+  }
+  FILE *fp = fopen(argv[1], "r");
+  if (!fp) {
+    perror("fopen");
+    return 1;
+  }
   char a[40];
-  klee_make_symbolic(a, sizeof(a), "a");
+  size_t n = fread(a, 1, sizeof(a), fp);
+  printf("read %zu bytes\n", n);
+  fclose(fp);
   int bid = klee_range(0, 3, "bid");
   if (bid == 0) {
     klee_assume(a[0] == 'h');
@@ -39,8 +50,12 @@ int main() {
   return 0;
 }
 
+// command:
+// ./build/bin/klee --libc=uclibc --posix-runtime 08.bc A -sym-files 1 40
 // output:
-// KLEE: done: total instructions = 13003
-// KLEE: done: completed paths = 25
+// read 40 bytes
+// read 40 bytes
+// KLEE: done: total instructions = 22024
+// KLEE: done: completed paths = 6
 // KLEE: done: partially completed paths = 0
-// KLEE: done: generated tests = 25
+// KLEE: done: generated tests = 6

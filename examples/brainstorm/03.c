@@ -5,10 +5,10 @@
 int main() {
   char a[40];
   klee_make_symbolic(a, sizeof(a), "a");
-  if (memcmp(a, "hello-world", 11) == 0) {
+  if (!memcmp(a, "hello-world", 11)) {
     printf("OK\n");
   }
-  if (memcmp(a, "goodbye-earth", 13) != 0) {
+  if (!memcmp(a, "goodbye-earth", 13)) {
     printf("Also OK\n");
   }
   return 0;
