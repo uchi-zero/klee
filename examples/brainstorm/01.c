@@ -5,7 +5,7 @@
 int main() {
   char a[40];
   klee_make_symbolic(a, sizeof(a), "a");
-  if (memcmp(a, "hello-world", 11) == 0) {
+  if (!memcmp(a, "hello-world", 11)) {
     printf("OK\n");
   }
   return 0;

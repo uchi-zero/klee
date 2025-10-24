@@ -5,9 +5,7 @@
 int main() {
   char a[40];
   klee_make_symbolic(a, sizeof(a), "a");
-  int bid = klee_range(
-      0, 2, "bid"); // klee_choose need to manually check all possible values
-  klee_open_merge();
+  int bid = klee_range(0, 2, "bid");
   if (bid == 0) {
     klee_assume(a[0] == 'h');
     klee_assume(a[1] == 'e');
@@ -20,6 +18,8 @@ int main() {
     klee_assume(a[8] == 'r');
     klee_assume(a[9] == 'l');
     klee_assume(a[10] == 'd');
+  }
+  if (!memcmp(a, "hello-world", 11)) {
     printf("OK\n");
   }
   return 0;
