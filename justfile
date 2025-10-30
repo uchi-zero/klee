@@ -32,5 +32,21 @@ klee: uclibc gtest
 rebuild:
     cmake --build build
 
-clean:
-    rm -rf /tmp/klee-out/*
+example case:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    outdir=$DATA/{{case}}
+    clang -I include -emit-llvm -c -g -O0 -Xclang -disable-O0-optnone examples/brainstorm/{{case}}.c
+    if [ -d "$outdir" ]; then
+        rm -r "$outdir"
+    fi
+    ./build/bin/klee --output-dir="$outdir" --only-output-states-covering-new --posix-runtime --libc=uclibc --solver-backend=z3 --write-exec-tree --max-time=10s {{case}}.bc A -sym-files 1 40
+    rm {{case}}.bc
+
+ktest case:
+    #!/usr/bin/env bash
+    {
+    for f in $DATA/{{case}}/*.ktest; do
+        ./build/bin/ktest-tool $f
+    done
+    } > {{case}}.txt
