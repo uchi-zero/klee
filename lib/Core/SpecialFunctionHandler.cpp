@@ -498,7 +498,7 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
 void SpecialFunctionHandler::handleAssumeIfPossible(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
-  assert(arguments.size() == 1 &&
+  assert(arguments.size() == 3 &&
          "invalid number of arguments to klee_assume_if_possible");
 
   ref<Expr> e = arguments[0];
@@ -510,13 +510,9 @@ void SpecialFunctionHandler::handleAssumeIfPossible(
   bool success __attribute__((unused)) = executor.solver->mustBeFalse(
       state.constraints, e, res, state.queryMetaData);
   assert(success && "FIXME: Unhandled solver failure");
-  if (res) {
-    std::string constraintLog;
-    executor.getConstraintLog(state, constraintLog,
-                              Interpreter::LogType::KQUERY);
-    klee_warning("klee_assume_if_possible: will not be assumed\n"
-                 "Current constraints:\n%s",
-                 constraintLog.c_str());
+  if (res) { // if the condition is not possible, print the range
+    auto printRangeArgs = std::vector<ref<Expr>>{arguments[1], arguments[2]};
+    SpecialFunctionHandler::handlePrintRange(state, target, printRangeArgs);
   } else {
     executor.addConstraint(state, e);
   }

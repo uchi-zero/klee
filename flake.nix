@@ -29,6 +29,7 @@
               stp
               gllvm
               wllvm
+              graphviz
               linuxHeaders
               gperftools
               sqlite
