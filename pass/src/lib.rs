@@ -1,43 +1,12 @@
+mod analysis;
+mod call_graph;
 mod src_loc;
 
-use llvm_plugin::inkwell::values::{FunctionValue, InstructionOpcode};
+use analysis::ForkInstAnalysis;
+use llvm_plugin::inkwell::values::FunctionValue;
 use llvm_plugin::{
-    AnalysisKey, FunctionAnalysisManager, LlvmFunctionAnalysis, LlvmFunctionPass, PassBuilder,
-    PipelineParsing, PreservedAnalyses,
+    FunctionAnalysisManager, LlvmFunctionPass, PassBuilder, PipelineParsing, PreservedAnalyses,
 };
-use src_loc::SourceLocation;
-
-// Analysis pass that collects branch instructions with locations
-struct ForkInstAnalysis;
-
-impl LlvmFunctionAnalysis for ForkInstAnalysis {
-    type Result = Vec<SourceLocation>;
-
-    fn run_analysis(
-        &self,
-        function: &FunctionValue,
-        _manager: &FunctionAnalysisManager,
-    ) -> Self::Result {
-        let mut locations = Vec::new();
-
-        for bb in function.get_basic_blocks() {
-            for inst in bb.get_instructions() {
-                if inst.get_opcode() == InstructionOpcode::Br {
-                    if let Some(info) = SourceLocation::from_instruction(&inst) {
-                        locations.push(info);
-                    }
-                }
-            }
-        }
-
-        locations
-    }
-
-    fn id() -> AnalysisKey {
-        static ID: u8 = 0;
-        &ID
-    }
-}
 
 // Printer pass that queries the analysis and prints results
 struct BranchPrinterPass;
@@ -52,7 +21,7 @@ impl LlvmFunctionPass for BranchPrinterPass {
         let function_name = function.get_name().to_str().unwrap();
 
         println!(
-            "Function '{}' has {} branch instruction(s):",
+            "Function '{}' has {} fork instruction(s):",
             function_name,
             locations.len()
         );
