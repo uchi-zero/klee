@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["pandas", "matplotlib"]
+# ///
 """
 coverage_plot.py
 
@@ -11,7 +15,7 @@ Each CSV is expected to have columns:
     - percent (float, optional; if missing it will be computed)
 
 Usage:
-    python scripts/coverage_plot.py brainstorm_out_7/coverage/coverage_by_event.csv brainstorm_out_8/coverage/coverage_by_event.csv \
+    uv run coverage_plot.py brainstorm_out_7/coverage/coverage_by_event.csv brainstorm_out_8/coverage/coverage_by_event.csv \
         --out coverage_4.png \
         --time-unit seconds \
         --y percent \
@@ -78,7 +82,6 @@ def load_and_prepare(path: str) -> pd.DataFrame:
     # Compute percent if missing
     if "percent" not in df.columns or df["percent"].isna().any():
         if "covered_lines" in df.columns and "total_lines" in df.columns:
-            # Avoid div-by-zero
             df["percent"] = (100.0 * df["covered_lines"].astype(float)
                              / df["total_lines"].replace({0: pd.NA}).astype(float)).fillna(0.0)
         else:
@@ -111,7 +114,6 @@ def main():
             y = df["percent_monotone"]
             ylabel = "Line Coverage (%)"
         else:
-            # Prefer monotone covered_lines if present; else derive from percent * total_lines / 100
             if "covered_lines_monotone" in df.columns and df["covered_lines_monotone"].notna().any():
                 y = df["covered_lines_monotone"]
             else:
@@ -120,7 +122,6 @@ def main():
                 else:
                     raise ValueError(f"{path}: cannot determine covered lines (missing columns).")
             ylabel = "Covered Lines"
-        # Plot each series; don't set explicit colors to keep defaults
         plt.plot(x, y, marker="o", label=label)
 
     plt.xlabel(xlabel)

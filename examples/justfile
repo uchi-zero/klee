@@ -1,68 +1,113 @@
-
 gclang_config := 'CC=gclang CXX=gclang++ CFLAGS="-g -O0 -Xclang -disable-O0-optnone"'
+cov_config := 'CFLAGS="-g -fprofile-instr-generate -fcoverage-mapping"'
 
 gnumake version="4.4":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "gnumake" ]; then
+    src_dir=$PWD/gnumake/src
+    install_dir=$PWD/gnumake/install
+    cov_dir=$PWD/gnumake/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p gnumake
         curl -fL -O https://mirrors.ibiblio.org/gnu/make/make-{{version}}.tar.gz
         tar zxf make-{{version}}.tar.gz
-        mv make-{{version}} gnumake
+        mv make-{{version}} "$src_dir"
         rm make-{{version}}.tar.gz
     fi
-    pushd gnumake
-        ./configure {{gclang_config}} --prefix=$PWD/install
-        make -j $(nproc)
+    # symbolic exec build
+    pushd "$src_dir"
+        {{gclang_config}} ./configure --prefix="$install_dir"
+        make clean
+        make -j "$(nproc)"
         make install
-        get-bc $PWD/install/bin/make
+        get-bc "$install_dir/bin/make"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        {{cov_config}} ./configure --prefix="$cov_dir"
+        make clean
+        make -j "$(nproc)"
+        make install
     popd
 
 lua version="5.4.8":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "lua" ]; then
+    src_dir=$PWD/lua/src
+    install_dir=$PWD/lua/install
+    cov_dir=$PWD/lua/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p lua
         curl -fL -O https://www.lua.org/ftp/lua-{{version}}.tar.gz
         tar zxf lua-{{version}}.tar.gz
-        mv lua-{{version}} lua
+        mv lua-{{version}} "$src_dir"
         rm lua-{{version}}.tar.gz
     fi
-    pushd lua
-        make clean
-        make -j $(nproc) posix {{gclang_config}}
-        make install INSTALL_TOP=$PWD/install
-        get-bc $PWD/install/bin/lua
+    # symbolic exec build
+    pushd "$src_dir"
+        make clean || true
+        {{gclang_config}} make -j "$(nproc)" posix
+        make install INSTALL_TOP="$install_dir"
+        get-bc "$install_dir/bin/lua"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        make clean || true
+        {{cov_config}} make -j "$(nproc)" posix
+        make install INSTALL_TOP="$cov_dir"
     popd
 
 openssl version="3.5.4":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "openssl" ]; then
+    src_dir=$PWD/openssl/src
+    install_dir=$PWD/openssl/install
+    cov_dir=$PWD/openssl/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p openssl
         curl -fL -O https://github.com/openssl/openssl/releases/download/openssl-{{version}}/openssl-{{version}}.tar.gz
         tar zxf openssl-{{version}}.tar.gz
-        mv openssl-{{version}} openssl
+        mv openssl-{{version}} "$src_dir"
         rm openssl-{{version}}.tar.gz
     fi
-    pushd openssl
-        {{gclang_config}} ./Configure  --prefix=$PWD/install no-shared no-module enable-tls1_3 enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-ssl3
-        make -j $(nproc)
-        make -j $(nproc) install
+    # symbolic exec build
+    pushd "$src_dir"
+        {{gclang_config}} ./Configure \
+            --prefix="$install_dir" \
+            no-shared no-module \
+            enable-tls1_3 enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-ssl3
+        make clean || true
+        make -j "$(nproc)"
+        make -j "$(nproc)" install
+    popd
+    # coverage build
+    pushd "$src_dir"
+        {{cov_config}} ./Configure \
+            --prefix="$cov_dir" \
+            no-shared no-module \
+            enable-tls1_3 enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-ssl3
+        make clean || true
+        make -j "$(nproc)"
+        make -j "$(nproc)" install
     popd
 
 curl version="8.16.0":
     #!/usr/bin/env bash
     set -euxo pipefail
-    install_dir=$PWD/curl/install
     src_dir=$PWD/curl/src
+    install_dir=$PWD/curl/install
+    cov_dir=$PWD/curl/cov
     if [ ! -d "$src_dir" ]; then
-        mkdir -p $PWD/curl
+        mkdir -p curl
         curl -fL -O https://curl.se/download/curl-{{version}}.tar.gz
         tar zxf curl-{{version}}.tar.gz
-        mv curl-{{version}} $src_dir
+        mv curl-{{version}} "$src_dir"
         rm curl-{{version}}.tar.gz
     fi
-    pushd $src_dir
-        make clean
-        {{gclang_config}} ./configure --prefix=$install_dir \
+    # symbolic exec build
+    pushd "$src_dir"
+        make clean || true
+        {{gclang_config}} ./configure --prefix="$install_dir" \
             --without-libpsl   \
             --without-librtmp  \
             --without-libgsasl \
@@ -73,169 +118,270 @@ curl version="8.16.0":
             --disable-pthreads \
             --disable-rt       \
             --disable-shared
-        make -j $(nproc)
-        make -j $(nproc) install
+        make -j "$(nproc)"
+        make -j "$(nproc)" install
+        get-bc "$install_dir/bin/curl"
     popd
-    get-bc $install_dir/bin/curl
+    # coverage build
+    pushd "$src_dir"
+        make clean || true
+        {{cov_config}} ./configure --prefix="$cov_dir" \
+            --without-libpsl   \
+            --without-librtmp  \
+            --without-libgsasl \
+            --without-ssl      \
+            --without-zlib     \
+            --without-brotli   \
+            --without-zstd     \
+            --disable-pthreads \
+            --disable-rt       \
+            --disable-shared
+        make -j "$(nproc)"
+        make -j "$(nproc)" install
+    popd
 
-
-# bc (GNU bc)
 bc version="1.07.1":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "bc-src" ]; then
+    src_dir=$PWD/bc/src
+    install_dir=$PWD/bc/install
+    cov_dir=$PWD/bc/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p bc
         curl -fL -O https://mirrors.ibiblio.org/gnu/bc/bc-{{version}}.tar.gz
         tar zxf bc-{{version}}.tar.gz
-        mv bc-{{version}} bc-src
+        mv bc-{{version}} "$src_dir"
         rm bc-{{version}}.tar.gz
     fi
-    pushd bc-src
-        {{gclang_config}}
-        ./configure --prefix=$PWD/install --disable-shared
+    # symbolic exec build
+    pushd "$src_dir"
+        {{gclang_config}} ./configure --prefix="$install_dir" --disable-shared
         make clean
-        make -j $(nproc)
-        make -j $(nproc) install
-        get-bc "$PWD/install/bin/bc"
+        make -j "$(nproc)"
+        make -j "$(nproc)" install
+        get-bc "$install_dir/bin/bc"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        {{cov_config}} ./configure --prefix="$cov_dir" --disable-shared
+        make clean
+        make -j "$(nproc)"
+        make -j "$(nproc)" install
     popd
 
-# tic (from ncurses)
 tic version="6.4":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "ncurses" ]; then
+    src_dir=$PWD/ncurses/src
+    install_dir=$PWD/ncurses/install
+    cov_dir=$PWD/ncurses/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p ncurses
         curl -fL -O https://mirrors.ibiblio.org/gnu/ncurses/ncurses-{{version}}.tar.gz
         tar zxf ncurses-{{version}}.tar.gz
-        mv ncurses-{{version}} ncurses
+        mv ncurses-{{version}} "$src_dir"
         rm ncurses-{{version}}.tar.gz
     fi
-    pushd ncurses
-        {{gclang_config}} ./configure  --with-termlib --without-debug --prefix=$PWD/install
+    # symbolic exec build
+    pushd "$src_dir"
+        {{gclang_config}} ./configure --with-termlib --without-debug --prefix="$install_dir"
         make -j "$(nproc)"
         make install
-        get-bc "$PWD/install/bin/tic"
+        get-bc "$install_dir/bin/tic"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        {{cov_config}} ./configure --with-termlib --without-debug --prefix="$cov_dir"
+        make clean
+        make -j "$(nproc)"
+        make install
     popd
 
 bison version="3.8.2":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "bison" ]; then
+    src_dir=$PWD/bison/src
+    install_dir=$PWD/bison/install
+    cov_dir=$PWD/bison/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p bison
         curl -fL -O https://mirrors.ibiblio.org/gnu/bison/bison-{{version}}.tar.gz
         tar zxf bison-{{version}}.tar.gz
-        mv bison-{{version}} bison
+        mv bison-{{version}} "$src_dir"
         rm bison-{{version}}.tar.gz
     fi
-    pushd bison
-        {{gclang_config}} ./configure --prefix=$PWD/install
+    # symbolic exec build
+    pushd "$src_dir"
+        {{gclang_config}} ./configure --prefix="$install_dir"
         make -j "$(nproc)"
         make install
-        get-bc "$PWD/install/bin/bison"
+        get-bc "$install_dir/bin/bison"
     popd
-  
-# readelf and strip (from binutils)
+    # coverage build
+    pushd "$src_dir"
+        {{cov_config}} ./configure --prefix="$cov_dir"
+        make clean
+        make -j "$(nproc)"
+        make install
+    popd
+
 binutils version="2.42":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "binutils" ]; then
+    src_dir=$PWD/binutils/src
+    install_dir=$PWD/binutils/install
+    cov_dir=$PWD/binutils/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p binutils
         curl -fL -O https://mirrors.ibiblio.org/gnu/binutils/binutils-{{version}}.tar.xz
         tar Jxf binutils-{{version}}.tar.xz
-        mv binutils-{{version}} binutils
+        mv binutils-{{version}} "$src_dir"
         rm binutils-{{version}}.tar.xz
     fi
-    pushd binutils
-        {{gclang_config}}
-        ./configure --disable-werror --prefix=$PWD/install
+    # symbolic exec build
+    pushd "$src_dir"
+        {{gclang_config}} ./configure --disable-werror --prefix="$install_dir"
         make -j "$(nproc)"
         make install
-        get-bc "$PWD/install/bin/readelf"
-        get-bc "$PWD/install/bin/strip"
+        get-bc "$install_dir/bin/readelf"
+        get-bc "$install_dir/bin/strip"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        {{cov_config}} ./configure --disable-werror --prefix="$cov_dir"
+        make clean
+        make -j "$(nproc)"
+        make install
     popd
 
-# ---- tiffinfo (from libtiff) ----
 tiffinfo version="4.6.0":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "tiff" ]; then
+    src_dir=$PWD/tiff/src
+    install_dir=$PWD/tiff/install
+    cov_dir=$PWD/tiff/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p tiff
         curl -fL -O https://download.osgeo.org/libtiff/tiff-{{version}}.tar.gz
         tar zxf tiff-{{version}}.tar.gz
-        mv tiff-{{version}} tiff
+        mv tiff-{{version}} "$src_dir"
         rm tiff-{{version}}.tar.gz
     fi
-    pushd tiff
+    # symbolic exec build
+    pushd "$src_dir"
         make clean || true
-        {{gclang_config}} ./configure --prefix="$PWD/install" --disable-shared
+        {{gclang_config}} ./configure --prefix="$install_dir" --disable-shared
         make -j "$(nproc)"
         make install
-        get-bc "$PWD/install/bin/tiffinfo"
+        get-bc "$install_dir/bin/tiffinfo"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        make clean || true
+        {{cov_config}} ./configure --prefix="$cov_dir" --disable-shared
+        make -j "$(nproc)"
+        make install
     popd
 
-
-# ---- flvmeta  ----
 flvmeta version="1.2.2":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "flvmeta" ]; then
+    src_dir=$PWD/flvmeta/src
+    install_dir=$PWD/flvmeta/install
+    cov_dir=$PWD/flvmeta/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p flvmeta
         curl -fL -o flvmeta-{{version}}.tar.gz \
           "https://github.com/noirotm/flvmeta/archive/refs/tags/v{{version}}.tar.gz"
         tar zxf flvmeta-{{version}}.tar.gz
-        mv flvmeta-{{version}} flvmeta
+        mv flvmeta-{{version}} "$src_dir"
         rm flvmeta-{{version}}.tar.gz
     fi
-    pushd flvmeta
+    # symbolic exec build
+    pushd "$src_dir"
         rm -rf build
         {{gclang_config}} cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCMAKE_INSTALL_PREFIX="$PWD/install" \
+            -DCMAKE_INSTALL_PREFIX="$install_dir" \
             -DBUILD_SHARED_LIBS=OFF
         ninja -C build -j "$(nproc)"
         ninja -C build install
-        get-bc "$PWD/install/bin/flvmeta"
+        get-bc "$install_dir/bin/flvmeta"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        rm -rf build-cov
+        {{cov_config}} cmake -S . -B build-cov -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX="$cov_dir" \
+            -DBUILD_SHARED_LIBS=OFF
+        ninja -C build-cov -j "$(nproc)"
+        ninja -C build-cov install
     popd
 
-# ---- transicc (from lcms2) ----
 transicc version="2.16":
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ ! -d "lcms2" ]; then
+    src_dir=$PWD/lcms2/src
+    install_dir=$PWD/lcms2/install
+    cov_dir=$PWD/lcms2/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p lcms2
         curl -fL -O https://downloads.sourceforge.net/project/lcms/lcms/{{version}}/lcms2-{{version}}.tar.gz
         tar zxf lcms2-{{version}}.tar.gz
-        mv lcms2-{{version}} lcms2
+        mv lcms2-{{version}} "$src_dir"
         rm lcms2-{{version}}.tar.gz
     fi
-    pushd lcms2
+    # symbolic exec build
+    pushd "$src_dir"
         make clean || true
-        {{gclang_config}} ./configure --prefix="$PWD/install" --disable-shared
+        {{gclang_config}} ./configure --prefix="$install_dir" --disable-shared
         make -j "$(nproc)"
         make install
-        get-bc "$PWD/install/bin/transicc"
+        get-bc "$install_dir/bin/transicc"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        make clean || true
+        {{cov_config}} ./configure --prefix="$cov_dir" --disable-shared
+        make -j "$(nproc)"
+        make install
     popd
 
-
-# ---- jasper  ----
 jasper version="4.2.4":
     #!/usr/bin/env bash
     set -euxo pipefail
-
-    # fresh, correct source (includes cmake/ modules)
-    rm -rf jasper jasper-{{version}}.tar.gz
-    curl -fL -o jasper-{{version}}.tar.gz \
-      "https://github.com/jasper-software/jasper/releases/download/version-{{version}}/jasper-{{version}}.tar.gz"
-    tar zxf jasper-{{version}}.tar.gz
-    mv jasper-{{version}} jasper
-    rm jasper-{{version}}.tar.gz
-
-    # build OUTSIDE the source tree to avoid "InSourceBuild" logic and double 'build/' paths
-    rm -rf build-jasper
-    mkdir -p build-jasper
-
-    # make sure CC/CXX/CFLAGS are applied to the first configure
-    {{gclang_config}} cmake -S jasper -B build-jasper -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_INSTALL_PREFIX="$PWD/jasper/install" \
-        -DJAS_ENABLE_PROGRAMS=ON \
-        -DJAS_ENABLE_SHARED=OFF
-
-    ninja -C build-jasper -j"$(nproc)"
-    ninja -C build-jasper install
-
-    get-bc "$PWD/jasper/install/bin/jasper"
-
+    src_dir=$PWD/jasper/src
+    install_dir=$PWD/jasper/install
+    cov_dir=$PWD/jasper/cov
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p jasper
+        curl -fL -o jasper-{{version}}.tar.gz \
+          "https://github.com/jasper-software/jasper/releases/download/version-{{version}}/jasper-{{version}}.tar.gz"
+        tar zxf jasper-{{version}}.tar.gz
+        mv jasper-{{version}} "$src_dir"
+        rm jasper-{{version}}.tar.gz
+    fi
+    # symbolic exec build
+    pushd "$src_dir"
+        rm -rf build
+        {{gclang_config}} cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX="$install_dir" \
+            -DJAS_ENABLE_PROGRAMS=ON \
+            -DJAS_ENABLE_SHARED=OFF
+        ninja -C build -j"$(nproc)"
+        ninja -C build install
+        get-bc "$install_dir/bin/jasper"
+    popd
+    # coverage build
+    pushd "$src_dir"
+        rm -rf build-cov
+        {{cov_config}} cmake -S . -B build-cov -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX="$cov_dir" \
+            -DJAS_ENABLE_PROGRAMS=ON \
+            -DJAS_ENABLE_SHARED=OFF
+        ninja -C build-cov -j"$(nproc)"
+        ninja -C build-cov install
+    popd
