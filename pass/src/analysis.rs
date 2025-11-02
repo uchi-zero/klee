@@ -1,4 +1,4 @@
-use crate::call_graph::{CallGraph, LLVMExt};
+use crate::call_graph::CallGraph;
 use crate::src_loc::SourceLocation;
 
 use llvm_plugin::inkwell::module::Module;
