@@ -8,9 +8,9 @@ use std::path::PathBuf;
 /// Store branch info with location
 #[derive(Debug)]
 pub struct SourceLocation {
-    pub filepath: PathBuf,
-    pub line: u32,
-    pub column: u32,
+    filepath: PathBuf,
+    line: u32,
+    column: u32,
 }
 
 fn non_null<T>(ptr: *mut T) -> Option<*mut T> {
