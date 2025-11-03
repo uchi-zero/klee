@@ -17,6 +17,18 @@ fn non_null<T>(ptr: *mut T) -> Option<*mut T> {
     if ptr.is_null() { None } else { Some(ptr) }
 }
 
+impl std::fmt::Display for SourceLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}:{}:{}",
+            self.filepath.display(),
+            self.line,
+            self.column
+        )
+    }
+}
+
 impl SourceLocation {
     /// Extract branch information from an LLVM instruction
     pub fn from_instruction(inst: &InstructionValue) -> Option<Self> {
