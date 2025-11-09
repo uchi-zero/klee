@@ -19,7 +19,7 @@ int main() {
     klee_assume(a[9] == 'l');
     klee_assume(a[10] == 'd');
   }
-  if (!memcmp(a, "hello-world", 11)) {
+  if (!bid) {
     printf("OK\n");
   }
   return 0;
