@@ -20,7 +20,7 @@ fn plugin_registrar(builder: &mut llvm_plugin::PassBuilder) {
     });
 
     builder.add_function_pipeline_parsing_callback(|name, manager| {
-        if name == "fork-info-printer" {
+        if name == "fork-inst-printer" {
             manager.add_pass(ForkInfoPrinter);
             llvm_plugin::PipelineParsing::Parsed
         } else {

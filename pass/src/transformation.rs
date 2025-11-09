@@ -12,14 +12,10 @@ impl llvm_plugin::LlvmFunctionPass for ForkInfoPrinter {
         let locations = manager.get_result::<ForkInstAnalysis>(function);
         let function_name = function.get_name().to_str().unwrap();
 
-        println!(
-            "Function '{}' has {} fork instruction(s):",
-            function_name,
-            locations.len()
-        );
+        println!("function: {}", function_name);
 
         for loc in locations.iter() {
-            println!("{:?}", loc);
+            println!("{}", loc);
         }
 
         llvm_plugin::PreservedAnalyses::All
