@@ -41,13 +41,9 @@ autom4te.cache/
 # Cache files
 /.cache/
 
-# Other examples
-/examples/*
-!/examples/get_sign/
-!/examples/regexp/
-!/examples/sort/
-!/examples/hard_switch/
-!/examples/justfile
-
 # Python related files
 __pycache__/
+.venv/
+
+# direnv files
+.envrc

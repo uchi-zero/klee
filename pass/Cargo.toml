@@ -1,0 +1,12 @@
+[package]
+name = "pass"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+llvm-plugin = { git = "https://github.com/jamesmth/llvm-plugin-rs", features = ["llvm13-0"] }
+petgraph = "0.8.3"
+
+
+[lib]
+crate-type = ["cdylib"]
