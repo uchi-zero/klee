@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run
+#!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
@@ -18,6 +18,8 @@
 #      and writes group-only coverage_by_group.csv with all llvm-cov summary metrics.
 #   2) Resamples coverage_by_group.csv onto a fixed time grid and writes per-kind
 #      coverage CSVs (function/line/region/branch/inst).
+#   3) Additionally, extracts KLEE basic-block/branch coverage (BCov-style)
+#      from run.stats and writes bb_coverage.csv on the same time grid.
 #
 # Outputs under <outdir>/coverage/:
 #   - coverage_by_group.csv
@@ -29,6 +31,7 @@
 #       region_coverage.csv
 #       branch_coverage.csv
 #       inst_coverage.csv
+#       bb_coverage.csv    <--(BCov from run.stats)
 #
 # Resampling semantics (LOCF):
 #   - Grid every --resample-step seconds (default 1200s = 20 min) from 0 to
@@ -47,6 +50,7 @@ import os
 import re
 import shutil
 import signal
+import sqlite3
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -426,6 +430,155 @@ def resample_and_split(coverage_csv: Path, out_dir: Path, step: int):
     print("- At each grid time T, use the most recent row with elapsed_sec <= T (LOCF).")
     print("- At time 0, we use the earliest row (baseline).")
 
+# ---------- BCov (basic-block / branch coverage) from run.stats ----------
+
+def _bcov_detect_columns(conn: sqlite3.Connection):
+    """Return (wall_col, num_br_col, full_br_col, partial_br_col) from stats schema."""
+    cur = conn.cursor()
+    cur.execute("PRAGMA table_info(stats)")
+    cols = [row[1] for row in cur.fetchall()]  # row[1] = column name
+
+    def pick(candidates):
+        for name in candidates:
+            if name in cols:
+                return name
+        return None
+
+    wall_col = pick(["WallTime", "Walltime"])
+    num_br_col = pick(["NumBranches", "Branches"])
+    full_br_col = pick(["FullBranches"])
+    partial_br_col = pick(["PartialBranches"])
+
+    if wall_col is None:
+        raise RuntimeError(
+            f"[bcov] no WallTime column found in stats table; have columns: {cols}"
+        )
+    if num_br_col is None or full_br_col is None or partial_br_col is None:
+        raise RuntimeError(
+            "[bcov] could not find branch-coverage columns; "
+            f"need NumBranches/Branches, FullBranches, PartialBranches. Have: {cols}"
+        )
+    return wall_col, num_br_col, full_br_col, partial_br_col
+
+def _bcov_load_raw(run_stats: Path):
+    """
+    Load (times_sec, bb_total, bb_covered) from run.stats.
+
+    bb_total   = 2 * NumBranches
+    bb_covered = 2 * FullBranches + PartialBranches
+    """
+    if not run_stats.is_file():
+        raise FileNotFoundError(f"[bcov] run.stats not found at {run_stats}")
+
+    conn = sqlite3.connect(str(run_stats))
+    try:
+        wall_col, num_br_col, full_br_col, partial_br_col = _bcov_detect_columns(conn)
+        cur = conn.cursor()
+        query = (
+            f"SELECT {wall_col}, {num_br_col}, {full_br_col}, {partial_br_col} "
+            f"FROM stats ORDER BY {wall_col} ASC"
+        )
+        cur.execute(query)
+        rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        raise RuntimeError(f"[bcov] stats table in {run_stats} is empty")
+
+    wall_values = [r[0] for r in rows]
+    max_wall = max(wall_values)
+    # KLEE stores times in microseconds (klee-stats divides by 1e6).
+    factor = 1_000_000.0 if max_wall > 1e7 else 1.0
+
+    times_sec = []
+    bb_total = []
+    bb_covered = []
+
+    for wall, num_br, full_br, partial_br in rows:
+        t_sec = float(wall) / factor
+        times_sec.append(t_sec)
+
+        num_br = int(num_br)
+        full_br = int(full_br)
+        partial_br = int(partial_br)
+
+        total_edges = 2 * num_br
+        covered_edges = 2 * full_br + partial_br
+
+        bb_total.append(total_edges)
+        bb_covered.append(covered_edges)
+
+    # Insert a baseline at t = 0 with zero coverage but final total.
+    if times_sec[0] > 0.0:
+        final_total = bb_total[-1] if bb_total[-1] > 0 else (bb_total[0] or 0)
+        times_sec.insert(0, 0.0)
+        bb_total.insert(0, final_total)
+        bb_covered.insert(0, 0)
+
+    return times_sec, bb_total, bb_covered
+
+def _bcov_resample_locf(times, totals, covered, step_sec: int):
+    """Resample BCov onto a regular grid with Last Observation Carried Forward.
+
+    Returns list of (elapsed_sec, bb_covered, bb_total, bb_percent).
+    """
+    if not times:
+        return []
+
+    max_t = times[-1]
+    if max_t <= 0:
+        max_t = step_sec
+
+    last_grid = int(math.ceil(max_t / step_sec) * step_sec)
+    grid = list(range(0, last_grid + 1, step_sec))
+
+    result = []
+    j = 0
+    n = len(times)
+
+    for T in grid:
+        # Move j to the last sample with time <= T
+        while j + 1 < n and times[j + 1] <= T:
+            j += 1
+
+        cur_cov = covered[j]
+        cur_tot = totals[j] if totals[j] > 0 else 0
+
+        if cur_tot > 0:
+            pct = 100.0 * cur_cov / cur_tot
+        else:
+            pct = 0.0
+
+        result.append((float(T), int(cur_cov), int(cur_tot), pct))
+
+    return result
+
+def _bcov_write_csv(out_path: Path, rows):
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["elapsed_sec", "bb_covered", "bb_total", "bb_percent"])
+        for elapsed, cov, tot, pct in rows:
+            w.writerow([f"{elapsed:.6f}", cov, tot, f"{pct:.2f}"])
+
+def bcov_from_run_stats(outdir: Path, resample_out: Path, step_sec: int):
+    """Top-level helper: extract BCov from run.stats and write bb_coverage.csv."""
+    run_stats = outdir / "run.stats"
+    if not run_stats.is_file():
+        print(f"[bcov] no run.stats found at {run_stats}; skipping basic-block coverage")
+        return
+
+    try:
+        times_sec, totals, covered = _bcov_load_raw(run_stats)
+        rows = _bcov_resample_locf(times_sec, totals, covered, step_sec)
+        out_path = resample_out / "bb_coverage.csv"
+        _bcov_write_csv(out_path, rows)
+        print(f"[bcov] wrote {out_path}")
+        print("       Columns: elapsed_sec, bb_covered, bb_total, bb_percent")
+    except Exception as e:
+        print(f"[bcov] ERROR while extracting BCov from {run_stats}: {e}", file=sys.stderr)
+
 # ---------- main ----------
 
 def main():
@@ -433,7 +586,8 @@ def main():
         description=(
             "KLEE coverage tracker:\n"
             "  - Replays ktests + merges profiles into coverage_by_group.csv\n"
-            "  - Optionally resamples & splits into per-kind coverage CSVs"
+            "  - Optionally resamples & splits into per-kind coverage CSVs\n"
+            "  - Additionally extracts basic-block/branch coverage (BCov) from run.stats"
         )
     )
     ap.add_argument("--target", required=True,
@@ -464,7 +618,7 @@ def main():
 
     # Resampling knobs
     ap.add_argument("--no-resample", action="store_true",
-                    help="Skip splitting/resampling coverage_by_group.csv.")
+                    help="Skip splitting/resampling coverage_by_group.csv (and BCov).")
     ap.add_argument("--resample-step", type=int, default=1200,
                     help="Grid step in seconds for resampling (default 1200 = 20 min).")
     ap.add_argument("--resample-out", default=None,
@@ -652,7 +806,7 @@ def main():
 
     print(f"[group] wrote {csv_path}")
 
-    # 4) Optional resampling/splitting
+    # 4) Optional resampling/splitting (+ BCov)
     if not args.no_resample:
         resample_out = (
             Path(args.resample_out).resolve()
@@ -661,6 +815,9 @@ def main():
         )
         print(f"[resample] using output dir: {resample_out}")
         resample_and_split(csv_path, resample_out, step=args.resample_step)
+
+        # NEW: also compute BCov (basic-block/branch coverage) from run.stats
+        bcov_from_run_stats(outdir, resample_out, args.resample_step)
 
     return 0
 
