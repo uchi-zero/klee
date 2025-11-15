@@ -31,7 +31,7 @@
 #       region_coverage.csv
 #       branch_coverage.csv
 #       inst_coverage.csv
-#       bb_coverage.csv    <--(BCov from run.stats)
+#       bb_coverage.csv    <-- NEW (BCov from run.stats)
 #
 # Resampling semantics (LOCF):
 #   - Grid every --resample-step seconds (default 1200s = 20 min) from 0 to
@@ -42,7 +42,6 @@
 #
 # ------------------------------------------------------------------------------
 
-import argparse
 import csv
 import json
 import math
@@ -55,6 +54,8 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+import click
 
 # ---------- generic helpers ----------
 
@@ -579,57 +580,150 @@ def bcov_from_run_stats(outdir: Path, resample_out: Path, step_sec: int):
     except Exception as e:
         print(f"[bcov] ERROR while extracting BCov from {run_stats}: {e}", file=sys.stderr)
 
-# ---------- main ----------
+# ---------- main (click CLI) ----------
 
-def main():
-    ap = argparse.ArgumentParser(
-        description=(
-            "KLEE coverage tracker:\n"
-            "  - Replays ktests + merges profiles into coverage_by_group.csv\n"
-            "  - Optionally resamples & splits into per-kind coverage CSVs\n"
-            "  - Additionally extracts basic-block/branch coverage (BCov) from run.stats"
-        )
-    )
-    ap.add_argument("--target", required=True,
-                    help="Instrumented native binary (-fprofile-instr-generate -fcoverage-mapping)")
-    ap.add_argument("--outdir", required=True,
-                    help="KLEE output dir containing test*.ktest")
-    ap.add_argument("--group-sec", type=float, default=0.0,
-                    help="Group ktests by this bucket size in seconds; 0 = one event per ktest.")
-    ap.add_argument("--klee-replay", default="klee-replay")
-    ap.add_argument("--llvm-profdata", default="llvm-profdata")
-    ap.add_argument("--llvm-cov", default="llvm-cov")
-    ap.add_argument("--skip-early-markers", action="store_true",
-                    help="Skip ktests that have a sibling testXXXXXX.early marker.")
-    ap.add_argument("--ktest-suffix", default="",
-                    help="Additional suffix after .ktest to match (e.g., '.A_data'). Default: ''")
-
-    # Latency knobs
-    ap.add_argument("--per-test-timeout-sec", type=float, default=15.0,
-                    help="Timeout per klee-replay (seconds).")
-    ap.add_argument("--kill-after-sec", type=float, default=2.0,
-                    help="SIGKILL after this many seconds if SIGTERM didn’t stop the replay.")
-    ap.add_argument("--make-no-exec", action="store_true",
-                    help="Set MAKEFLAGS='-n' during replay to avoid executing recipes.")
-    ap.add_argument("--merge-chunk-size", type=int, default=5000,
-                    help="Max inputs per llvm-profdata merge chunk.")
-    ap.add_argument("--num-threads", type=int, default=0,
-                    help="Threads for llvm-profdata merges (0 = use CPU count).")
-
-    # Resampling knobs
-    ap.add_argument("--no-resample", action="store_true",
-                    help="Skip splitting/resampling coverage_by_group.csv (and BCov).")
-    ap.add_argument("--resample-step", type=int, default=1200,
-                    help="Grid step in seconds for resampling (default 1200 = 20 min).")
-    ap.add_argument("--resample-out", default=None,
-                    help="Directory for per-kind resampled CSVs "
-                         "(default: <outdir>/coverage/resampled).")
-
-    args = ap.parse_args()
-
-    target  = Path(args.target).resolve()
-    outdir  = Path(args.outdir).resolve()
-    covdir  = outdir / "coverage"
+@click.command(
+    context_settings={"help_option_names": ["-h", "--help"]},
+    help=(
+        "KLEE coverage tracker:\n"
+        "  - Replays ktests + merges profiles into coverage_by_group.csv\n"
+        "  - Optionally resamples & splits into per-kind coverage CSVs\n"
+        "  - Additionally extracts basic-block/branch coverage (BCov) from run.stats"
+    ),
+)
+@click.option(
+    "--target",
+    required=True,
+    type=str,
+    help="Instrumented native binary (-fprofile-instr-generate -fcoverage-mapping).",
+)
+@click.option(
+    "--outdir",
+    required=True,
+    type=str,
+    help="KLEE output dir containing test*.ktest.",
+)
+@click.option(
+    "--group-sec",
+    type=float,
+    default=0.0,
+    show_default=True,
+    help="Group ktests by this bucket size in seconds; 0 = one event per ktest.",
+)
+@click.option(
+    "--klee-replay",
+    type=str,
+    default="klee-replay",
+    show_default=True,
+    help="Path to klee-replay.",
+)
+@click.option(
+    "--llvm-profdata",
+    type=str,
+    default="llvm-profdata",
+    show_default=True,
+    help="Path to llvm-profdata.",
+)
+@click.option(
+    "--llvm-cov",
+    type=str,
+    default="llvm-cov",
+    show_default=True,
+    help="Path to llvm-cov.",
+)
+@click.option(
+    "--skip-early-markers",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Skip ktests that have a sibling testXXXXXX.early marker.",
+)
+@click.option(
+    "--ktest-suffix",
+    type=str,
+    default="",
+    show_default=True,
+    help="Additional suffix after .ktest to match (e.g., '.A_data').",
+)
+# Latency knobs
+@click.option(
+    "--per-test-timeout-sec",
+    type=float,
+    default=15.0,
+    show_default=True,
+    help="Timeout per klee-replay (seconds).",
+)
+@click.option(
+    "--kill-after-sec",
+    type=float,
+    default=2.0,
+    show_default=True,
+    help="SIGKILL after this many seconds if SIGTERM didn’t stop the replay.",
+)
+@click.option(
+    "--make-no-exec",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Set MAKEFLAGS='-n' during replay to avoid executing recipes.",
+)
+@click.option(
+    "--merge-chunk-size",
+    type=int,
+    default=5000,
+    show_default=True,
+    help="Max inputs per llvm-profdata merge chunk.",
+)
+@click.option(
+    "--num-threads",
+    type=int,
+    default=0,
+    show_default=True,
+    help="Threads for llvm-profdata merges (0 = use CPU count).",
+)
+# Resampling knobs
+@click.option(
+    "--no-resample",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Skip splitting/resampling coverage_by_group.csv (and BCov).",
+)
+@click.option(
+    "--resample-step",
+    type=int,
+    default=1200,
+    show_default=True,
+    help="Grid step in seconds for resampling (default 1200 = 20 min).",
+)
+@click.option(
+    "--resample-out",
+    type=str,
+    default=None,
+    show_default=True,
+    help="Directory for per-kind resampled CSVs (default: <outdir>/coverage/resampled).",
+)
+def main(
+    target,
+    outdir,
+    group_sec,
+    klee_replay,
+    llvm_profdata,
+    llvm_cov,
+    skip_early_markers,
+    ktest_suffix,
+    per_test_timeout_sec,
+    kill_after_sec,
+    make_no_exec,
+    merge_chunk_size,
+    num_threads,
+    no_resample,
+    resample_step,
+    resample_out,
+):
+    target_path  = Path(target).resolve()
+    outdir_path  = Path(outdir).resolve()
+    covdir  = outdir_path / "coverage"
     profraw = covdir / "profraw"
     tmpdir  = covdir / "tmp"
     covdir.mkdir(exist_ok=True)
@@ -637,13 +731,13 @@ def main():
     tmpdir.mkdir(exist_ok=True)
 
     # 1) Discover tests and t0
-    tests = list_ktests(outdir, args.skip_early_markers, args.ktest_suffix)
+    tests = list_ktests(outdir_path, skip_early_markers, ktest_suffix)
     if not tests:
         print("[group] no ktests found")
-        return 0
+        raise SystemExit(0)
 
     tests = sorted(tests, key=mtime)
-    asm = outdir / "assembly.ll"
+    asm = outdir_path / "assembly.ll"
     earliest_test_ts = tests[0].stat().st_mtime
     t0 = min(
         (asm.stat().st_mtime if asm.exists() else earliest_test_ts),
@@ -652,7 +746,7 @@ def main():
 
     # 2) Build groups
     groups = []
-    if args.group_sec <= 0.0:
+    if group_sec <= 0.0:
         for t in tests:
             groups.append((mtime(t) - t0, [t]))
     else:
@@ -660,7 +754,7 @@ def main():
         buckets = defaultdict(list)
         for t in tests:
             dt = mtime(t) - t0
-            k  = math.floor(dt / args.group_sec) * args.group_sec
+            k  = math.floor(dt / group_sec) * group_sec
             buckets[k].append(t)
         for k in sorted(buckets.keys()):
             groups.append((k, buckets[k]))
@@ -675,7 +769,7 @@ def main():
     csv_path = covdir / "coverage_by_group.csv"
     baseline_written = False
     timeout_bin = find_timeout_bin()
-    threads = (nproc() if args.num_threads in (0, None) else max(1, args.num_threads))
+    threads = (nproc() if num_threads in (0, None) else max(1, num_threads))
 
     timed_out_log = profraw / ".timed_out"
     failed_log    = profraw / ".failed"
@@ -705,14 +799,14 @@ def main():
                 pat = str(profraw / f"{t.name}-%p.profraw")
                 env = os.environ.copy()
                 env["LLVM_PROFILE_FILE"] = pat
-                if args.make_no_exec:
+                if make_no_exec:
                     env["MAKEFLAGS"] = "-n"
 
-                cmd = [args.klee_replay, str(target), str(t)]
+                cmd = [klee_replay, str(target_path), str(t)]
                 rc, to = replay_with_timeout(
                     cmd, env, timeout_bin,
-                    args.per_test_timeout_sec,
-                    args.kill_after_sec,
+                    per_test_timeout_sec,
+                    kill_after_sec,
                 )
 
                 total_replayed += 1
@@ -742,30 +836,30 @@ def main():
             # merge group's raw -> bucket.profdata (chunked)
             bucket_prof = tmpdir / f"bucket_{int(round(elapsed * 1e6))}.profdata"
             merge_prof_chunked(
-                args.llvm_profdata, raws_this, bucket_prof,
+                llvm_profdata, raws_this, bucket_prof,
                 tmpdir / "bucket_parts",
-                args.merge_chunk_size, threads,
+                merge_chunk_size, threads,
             )
 
             # cumulative merge (small)
             if cum_prof is None:
                 cum_prof = tmpdir / f"cum_{int(round(elapsed * 1e6))}.profdata"
                 merge_prof_chunked(
-                    args.llvm_profdata, [bucket_prof], cum_prof,
+                    llvm_profdata, [bucket_prof], cum_prof,
                     tmpdir / "cum_parts_init",
-                    args.merge_chunk_size, threads,
+                    merge_chunk_size, threads,
                 )
             else:
                 new_cum = tmpdir / f"cum_{int(round(elapsed * 1e6))}.profdata"
                 merge_prof_chunked(
-                    args.llvm_profdata, [str(cum_prof), str(bucket_prof)], new_cum,
+                    llvm_profdata, [str(cum_prof), str(bucket_prof)], new_cum,
                     tmpdir / "cum_parts",
-                    args.merge_chunk_size, threads,
+                    merge_chunk_size, threads,
                 )
                 cum_prof = new_cum
 
             # totals
-            tot = export_summary_all(args.llvm_cov, target, cum_prof)
+            tot = export_summary_all(llvm_cov, target_path, cum_prof)
 
             # baseline row at t0 (true 0 coverage)
             if not baseline_written:
@@ -807,19 +901,18 @@ def main():
     print(f"[group] wrote {csv_path}")
 
     # 4) Optional resampling/splitting (+ BCov)
-    if not args.no_resample:
-        resample_out = (
-            Path(args.resample_out).resolve()
-            if args.resample_out is not None
+    if not no_resample:
+        resample_out_path = (
+            Path(resample_out).resolve()
+            if resample_out is not None
             else (covdir / "resampled")
         )
-        print(f"[resample] using output dir: {resample_out}")
-        resample_and_split(csv_path, resample_out, step=args.resample_step)
+        print(f"[resample] using output dir: {resample_out_path}")
+        resample_and_split(csv_path, resample_out_path, step=resample_step)
 
         # NEW: also compute BCov (basic-block/branch coverage) from run.stats
-        bcov_from_run_stats(outdir, resample_out, args.resample_step)
+        bcov_from_run_stats(outdir_path, resample_out_path, resample_step)
 
-    return 0
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
