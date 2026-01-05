@@ -207,6 +207,9 @@ public:
   /// @brief Set containing which lines in which files are covered by this state
   std::map<const std::string *, std::set<std::uint32_t>> coveredLines;
 
+  /// @brief Complete coverage history from execution start (not cleared on fork)  
+  std::map<const std::string *, std::set<std::uint32_t>> allCoveredLines;
+
   /// @brief Pointer to the execution tree of the current state
   /// Copies of ExecutionState should not copy executionTreeNode
   ExecutionTreeNode *executionTreeNode = nullptr;

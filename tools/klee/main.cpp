@@ -114,6 +114,11 @@ namespace {
            cl::cat(TestCaseCat));
 
   cl::opt<bool>
+  WriteAllCov("write-all-cov",  
+          cl::desc("Write complete coverage information for each test case (default=false)"),  
+          cl::cat(TestCaseCat));
+
+  cl::opt<bool>
   WriteTestInfo("write-test-info",
                 cl::desc("Write additional test case information (default=false)"),
                 cl::cat(TestCaseCat));
@@ -705,6 +710,19 @@ void KleeHandler::processTestCase(const ExecutionState &state,
           }
         }
       }
+    }
+
+    if (WriteAllCov) {  
+      std::map<const std::string*, std::set<unsigned> > allCov;  
+      m_interpreter->getAllCoveredLines(state, allCov);  
+      auto f = openTestFile("all.cov", test_id);  
+      if (f) {  
+        for (const auto &entry : allCov) {  
+          for (const auto &line : entry.second) {  
+            *f << *entry.first << ':' << line << '\n';  
+          }  
+        }  
+      }  
     }
 
     if (m_numGeneratedTests == MaxTests)

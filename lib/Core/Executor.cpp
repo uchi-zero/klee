@@ -4881,6 +4881,12 @@ void Executor::getCoveredLines(const ExecutionState &state,
   res = state.coveredLines;
 }
 
+void Executor::getAllCoveredLines(const ExecutionState &state,  
+                                 std::map<const std::string *, std::set<unsigned>> &res) {  
+  res = state.allCoveredLines;  
+}
+
+
 void Executor::doImpliedValueConcretization(ExecutionState &state,
                                             ref<Expr> e,
                                             ref<ConstantExpr> value) {
