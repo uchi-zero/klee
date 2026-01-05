@@ -105,6 +105,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     pathOS(state.pathOS),
     symPathOS(state.symPathOS),
     coveredLines(state.coveredLines),
+    allCoveredLines(state.allCoveredLines),
     symbolics(state.symbolics),
     cexPreferences(state.cexPreferences),
     arrayNames(state.arrayNames),
