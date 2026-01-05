@@ -574,7 +574,8 @@ public:
       override;
 
   void getAllCoveredLines(const ExecutionState &state,  
-                       std::map<const std::string *, std::set<unsigned>> &res);
+                       std::map<const std::string *, std::set<unsigned>> &res)
+      override;
 
   Expr::Width getWidthForLLVMType(llvm::Type *type) const;
   size_t getAllocationAlignment(const llvm::Value *allocSite) const;

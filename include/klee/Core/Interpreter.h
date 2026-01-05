@@ -164,6 +164,9 @@ public:
 
   virtual void getCoveredLines(const ExecutionState &state,
                                std::map<const std::string*, std::set<unsigned> > &res) = 0;
+
+  virtual void getAllCoveredLines(const ExecutionState &state,  
+                                std::map<const std::string*, std::set<unsigned> > &res) = 0;
 };
 
 } // End klee namespace
