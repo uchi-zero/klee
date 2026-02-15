@@ -1224,6 +1224,11 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
     replaceOrRenameFunction(modules[i].get(), "__libc_open", "open");
     replaceOrRenameFunction(modules[i].get(), "__libc_fcntl", "fcntl");
     replaceOrRenameFunction(modules[i].get(), "scanf", "__isoc99_scanf");
+    replaceOrRenameFunction(modules[i].get(), "fscanf", "__isoc99_fscanf");
+    replaceOrRenameFunction(modules[i].get(), "sscanf", "__isoc99_sscanf");
+    replaceOrRenameFunction(modules[i].get(), "vscanf", "__isoc99_vscanf");
+    replaceOrRenameFunction(modules[i].get(), "vfscanf", "__isoc99_vfscanf");
+    replaceOrRenameFunction(modules[i].get(), "vsscanf", "__isoc99_vsscanf");
   }
 
   if (mainFn)
