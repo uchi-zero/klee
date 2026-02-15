@@ -1251,7 +1251,8 @@ int main(int argc, char **argv, char **envp) {
      {&ChecksCat,      &DebugCat,    &ExtCallsCat, &ExprCat,     &LinkCat,
       &MemoryCat,      &MergeCat,    &MiscCat,     &ModuleCat,   &ReplayCat,
       &SearchCat,      &SeedingCat,  &SolvingCat,  &StartCat,    &StatsCat,
-      &TerminationCat, &TestCaseCat, &TestGenCat,  &ExecTreeCat, &ExecTreeCat});
+      &TerminationCat, &TestCaseCat, &TestGenCat,  &ExecTreeCat, &TestCompCat,
+      /* [Empc] */ &EmpcSearcherGraphCat, &EmpcSearcherDataCat, &EmpcSearcherLogCat});
   llvm::InitializeNativeTarget();
 
   parseArguments(argc, argv);
@@ -1532,6 +1533,12 @@ int main(int argc, char **argv, char **envp) {
     handler->getInfoStream() << argv[i] << (i + 1 < argc ? " " : "\n");
   handler->getInfoStream() << "PID: " << getpid() << "\n";
 
+  // [Empc]: Set up module information for Empc searcher
+  {
+    // Provide the information of main module for Empc searcher
+    interpreter->setSearcherPreModuleInfo(mainModule);
+  }
+
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
 
@@ -1539,6 +1546,24 @@ int main(int argc, char **argv, char **envp) {
   entryFn = finalModule->getFunction(EntryPoint);
   if (!entryFn)
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
+
+  // [Empc]: Set up entry function for Empc searcher
+  {
+    std::string mpcEntryFuncName = EntryPoint;
+    if (mpcEntryFuncName == "main") {
+      if (WithPOSIXRuntime) {
+        mpcEntryFuncName = "__klee_posix_wrapped_main";
+      } else if (Libc == LibcType::UcLibc) {
+        mpcEntryFuncName = "__user_main";
+      }
+    }
+    const llvm::Function *mpcEntryFunc =
+        finalModule->getFunction(mpcEntryFuncName);
+    if (!mpcEntryFunc)
+      klee_error("Empc entry function '%s' not found in module.",
+                 mpcEntryFuncName.c_str());
+    interpreter->setSearcherEntryFuncInfo(mpcEntryFunc);
+  }
 
   externalsAndGlobalsCheck(finalModule);
 

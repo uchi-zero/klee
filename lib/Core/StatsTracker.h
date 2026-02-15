@@ -16,93 +16,138 @@
 #include <memory>
 #include <set>
 #include <sqlite3.h>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+
+#include "llvm/IR/BasicBlock.h"
 
 namespace llvm {
-  class BranchInst;
-  class Function;
-  class Instruction;
-  class raw_fd_ostream;
-}
+class BranchInst;
+class Function;
+class Instruction;
+class raw_fd_ostream;
+} // namespace llvm
 
 namespace klee {
-  class ExecutionState;
-  class Executor;
-  class InstructionInfoTable;
-  class InterpreterHandler;
-  struct KInstruction;
-  struct StackFrame;
+class ExecutionState;
+class Executor;
+class InstructionInfoTable;
+class InterpreterHandler;
+struct KInstruction;
+struct StackFrame;
 
-  class StatsTracker {
-    friend class WriteStatsTimer;
-    friend class WriteIStatsTimer;
+class StatsTracker {
+  friend class WriteStatsTimer;
+  friend class WriteIStatsTimer;
 
-    Executor &executor;
-    std::string objectFilename;
+  Executor &executor;
+  std::string objectFilename;
 
-    std::unique_ptr<llvm::raw_fd_ostream> istatsFile;
-    ::sqlite3 *statsFile = nullptr;
-    ::sqlite3_stmt *transactionBeginStmt = nullptr;
-    ::sqlite3_stmt *transactionEndStmt = nullptr;
-    ::sqlite3_stmt *insertStmt = nullptr;
-    std::uint32_t statsCommitEvery;
-    std::uint32_t statsWriteCount = 0;
-    time::Point startWallTime;
+  /// @brief [Empc]: All the visited basic blocks
+  std::unordered_map<const llvm::BasicBlock *,
+                     std::pair<std::string, std::size_t>>
+      visitedBasicBlocks;
 
-    unsigned numBranches;
-    unsigned fullBranches, partialBranches;
+  /// @brief [Empc]: The added visited basic blocks in this time interval
+  std::unordered_map<const llvm::BasicBlock *,
+                     std::pair<std::string, std::size_t>>
+      addedVisitedBasicBlocks;
 
-    CallPathManager callPathManager;
+  /// @brief [Empc]: All the visited node lines
+  std::unordered_set<std::string> visitedLines;
 
-    bool updateMinDistToUncovered;
+  /// @brief [Empc]: The added visited lines in this time interval
+  std::unordered_set<std::string> addedVisitedLines;
 
-  public:
-    static bool useStatistics();
-    static bool useIStats();
+  /// @brief [Empc]: All the visited basic blocks in defined functions
+  std::unordered_map<const llvm::BasicBlock *,
+                     std::pair<std::string, std::size_t>>
+      visitedDefinedBasicBlocks;
 
-  private:
-    void updateStateStatistics(uint64_t addend);
-    void writeStatsHeader();
-    void writeStatsLine();
-    void writeIStats();
+  /// @brief [Empc]: The added visited basic blocks in defined functions in this
+  /// time interval
+  std::unordered_map<const llvm::BasicBlock *,
+                     std::pair<std::string, std::size_t>>
+      addedVisitedDefinedBasicBlocks;
 
-  public:
-    StatsTracker(Executor &_executor, std::string _objectFilename,
-                 bool _updateMinDistToUncovered);
-    ~StatsTracker();
+  /// @brief [Empc]: All the visited node lines in defined functions
+  std::unordered_set<std::string> visitedDefinedLines;
 
-    StatsTracker(const StatsTracker &other) = delete;
-    StatsTracker(StatsTracker &&other) noexcept = delete;
-    StatsTracker &operator=(const StatsTracker &other) = delete;
-    StatsTracker &operator=(StatsTracker &&other) noexcept = delete;
+  /// @brief [Empc]: The added visited lines in defined functions in this time
+  /// interval
+  std::unordered_set<std::string> addedVisitedDefinedLines;
 
-    // called after a new StackFrame has been pushed (for callpath tracing)
-    void framePushed(ExecutionState &es, StackFrame *parentFrame);
+  /// @brief [Empc]: File handler for bc-stats
+  std::unique_ptr<llvm::raw_fd_ostream> bcStatsFile;
 
-    // called after a StackFrame has been popped
-    void framePopped(ExecutionState &es);
+  std::unique_ptr<llvm::raw_fd_ostream> istatsFile;
+  ::sqlite3 *statsFile = nullptr;
+  ::sqlite3_stmt *transactionBeginStmt = nullptr;
+  ::sqlite3_stmt *transactionEndStmt = nullptr;
+  ::sqlite3_stmt *insertStmt = nullptr;
+  std::uint32_t statsCommitEvery;
+  std::uint32_t statsWriteCount = 0;
+  time::Point startWallTime;
 
-    // called when some side of a branch has been visited. it is
-    // imperative that this be called when the statistics index is at
-    // the index for the branch itself.
-    void markBranchVisited(ExecutionState *visitedTrue,
-                           ExecutionState *visitedFalse);
+  unsigned numBranches;
+  unsigned fullBranches, partialBranches;
 
-    // called when execution is done and stats files should be flushed
-    void done();
+  CallPathManager callPathManager;
 
-    // process stats for a single instruction step, es is the state
-    // about to be stepped
-    void stepInstruction(ExecutionState &es);
+  bool updateMinDistToUncovered;
 
-    /// Return duration since execution start.
-    time::Span elapsed();
+public:
+  static bool useStatistics();
+  static bool useIStats();
 
-    void computeReachableUncovered();
-  };
+private:
+  void updateStateStatistics(uint64_t addend);
+  void writeStatsHeader();
+  void writeStatsLine();
+  void writeIStats();
 
-  uint64_t computeMinDistToUncovered(const KInstruction *ki,
-                                     uint64_t minDistAtRA);
+  /// @brief [Empc]: Write bc-stats
+  void writeBCStats();
 
-}
+public:
+  StatsTracker(Executor &_executor, std::string _objectFilename,
+               bool _updateMinDistToUncovered);
+  ~StatsTracker();
+
+  StatsTracker(const StatsTracker &other) = delete;
+  StatsTracker(StatsTracker &&other) noexcept = delete;
+  StatsTracker &operator=(const StatsTracker &other) = delete;
+  StatsTracker &operator=(StatsTracker &&other) noexcept = delete;
+
+  // called after a new StackFrame has been pushed (for callpath tracing)
+  void framePushed(ExecutionState &es, StackFrame *parentFrame);
+
+  // called after a StackFrame has been popped
+  void framePopped(ExecutionState &es);
+
+  // called when some side of a branch has been visited. it is
+  // imperative that this be called when the statistics index is at
+  // the index for the branch itself.
+  void markBranchVisited(ExecutionState *visitedTrue,
+                         ExecutionState *visitedFalse);
+
+  // called when execution is done and stats files should be flushed
+  void done();
+
+  // process stats for a single instruction step, es is the state
+  // about to be stepped
+  void stepInstruction(ExecutionState &es);
+
+  /// Return duration since execution start.
+  time::Span elapsed();
+
+  void computeReachableUncovered();
+};
+
+uint64_t computeMinDistToUncovered(const KInstruction *ki,
+                                   uint64_t minDistAtRA);
+
+} // namespace klee
 
 #endif /* KLEE_STATSTRACKER_H */

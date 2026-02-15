@@ -14,6 +14,9 @@
 #include "MemoryManager.h"
 #include "MergeHandler.h"
 
+/// [Empc]: Include SearcherDefs.h
+#include "SearcherDefs.h"
+
 #include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Expr/Constraints.h"
@@ -133,8 +136,7 @@ struct CleanupPhaseUnwindingInformation : public UnwindingInformation {
                                    const std::size_t catchingStackIndex)
       : UnwindingInformation(exceptionObject,
                              UnwindingInformation::Kind::CleanupPhase),
-        selectorValue(selectorValue),
-        catchingStackIndex(catchingStackIndex) {}
+        selectorValue(selectorValue), catchingStackIndex(catchingStackIndex) {}
 
   std::unique_ptr<UnwindingInformation> clone() const {
     return std::make_unique<CleanupPhaseUnwindingInformation>(*this);
@@ -158,6 +160,11 @@ private:
 public:
   using stack_ty = std::vector<StackFrame>;
 
+  // Searcher - Utility for Searchers
+
+  /// @brief [Empc]: Utility for Empc searcher
+  Empc::StateStepType mpcStateStepType;
+
   // Execution - Control Flow specific
 
   /// @brief Pointer to instruction to be executed after the current
@@ -176,7 +183,8 @@ public:
 
   // Overall state of the state - Data specific
 
-  /// @brief Exploration depth, i.e., number of times KLEE branched for this state
+  /// @brief Exploration depth, i.e., number of times KLEE branched for this
+  /// state
   std::uint32_t depth = 0;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
@@ -223,11 +231,16 @@ public:
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
 
-  /// @brief The objects handling the klee_open_merge calls this state ran through
+  /// @brief The objects handling the klee_open_merge calls this state ran
+  /// through
   std::vector<ref<MergeHandler>> openMergeStack;
 
-  /// @brief The numbers of times this state has run through Executor::stepInstruction
+  /// @brief The numbers of times this state has run through
+  /// Executor::stepInstruction
   std::uint64_t steppedInstructions = 0;
+
+  /// @brief [SGS]: Either the current subpath or the current path
+  subpath_ty takenBranches;
 
   /// @brief Counts how many instructions were executed since the last new
   /// instruction was covered.
@@ -267,14 +280,15 @@ public:
   // no move ctor
   ExecutionState(ExecutionState &&) noexcept = delete;
   // no move assignment
-  ExecutionState& operator=(ExecutionState &&) noexcept = delete;
+  ExecutionState &operator=(ExecutionState &&) noexcept = delete;
   // dtor
   ~ExecutionState();
 
   ExecutionState *branch();
 
   void pushFrame(KInstIterator caller, KFunction *kf);
-  void popFrame();
+  void popFrame(); /* [Empc]: If it is called by the deconstructor,
+                                  it will not call raw stack pop */
 
   void deallocate(const MemoryObject *mo);
 
@@ -296,6 +310,6 @@ struct ExecutionStateIDCompare {
     return a->getID() < b->getID();
   }
 };
-}
+} // namespace klee
 
 #endif /* KLEE_EXECUTIONSTATE_H */
