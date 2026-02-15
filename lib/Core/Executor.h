@@ -45,6 +45,7 @@ namespace llvm {
   class BasicBlock;
   class BranchInst;
   class CallInst;
+  class ICmpInst;
   class LandingPadInst;
   class Constant;
   class ConstantExpr;
@@ -53,12 +54,15 @@ namespace llvm {
   class Instruction;
   class LLVMContext;
   class DataLayout;
+  class StoreInst;
+  class SwitchInst;
   class Twine;
   class Value;
 }
 
 namespace klee {
 class Array;
+class CGSSearcher;
 struct Cell;
 class ExecutionState;
 class ExternalDispatcher;
@@ -84,6 +88,23 @@ class MergeHandler;
 class MergingSearcher;
 template <class T> class ref;
 
+/// Branch dependency structure for CGS (Concrete Constraint Guided Searcher)
+struct BDDep {
+  unsigned type;  // 0: branch, 1: switch
+  unsigned id;
+  llvm::Instruction *inst;
+  llvm::ICmpInst *cond;
+  unsigned pred;
+  unsigned unCoveredPred;
+  llvm::Value *var;
+  signed constant;
+  std::string arith_op;
+  signed arith_var;
+  std::unordered_set<unsigned> stores;
+  std::unordered_set<signed> unCoveredValues;
+  unsigned var_num;
+};
+
 /// \todo Add a context object to keep track of data only live
 /// during an instruction step. Should contain addedStates,
 /// removedStates, and haltExecution, among others.
@@ -95,6 +116,7 @@ class Executor : public Interpreter {
   friend class StatsTracker;
   friend class MergeHandler;
   friend class ObjectState;
+  friend class CGSSearcher;
   friend klee::Searcher *klee::constructUserSearcher(Executor &executor);
 
 public:
@@ -207,6 +229,53 @@ private:
 
   /// Typeids used during exception handling
   std::vector<ref<Expr>> eh_typeids;
+
+  // CGS (Concrete Constraint Guided Searcher) related data structures
+  std::unordered_set<llvm::BranchInst *> totalConstrants;
+  std::unordered_set<llvm::BranchInst *> symbolicConstrants;
+  std::unordered_set<llvm::BranchInst *> concreteConstrants;
+  std::unordered_set<llvm::BranchInst *> fullyCoveredSymbolicConstrants;
+  std::unordered_set<llvm::BranchInst *> fullyCoveredConcreteConstrants;
+
+  // id to inst, or inst to id
+  std::unordered_map<unsigned, llvm::Instruction *> ID2BI;
+  std::unordered_map<llvm::Instruction *, unsigned> BI2ID;
+  std::unordered_map<unsigned, llvm::StoreInst *> ID2SI;
+  std::unordered_map<llvm::StoreInst *, unsigned> SI2ID;
+
+  // store instructions to dependent branch instructions
+  std::unordered_map<unsigned, std::unordered_set<unsigned>> storetTobranches;
+
+  // store instructions that shares the same branch variablees
+  std::unordered_map<unsigned, std::unordered_set<unsigned>> storesWithSameVar;
+
+  // branch id to dependency
+  std::unordered_map<unsigned, BDDep *> _BDDep;
+
+  // target, partially and fully covered concrete branches
+  unsigned targetBranchNum;
+  bool updateTargetBranch = false;
+  bool newFullyCoveredBranch = false;
+  bool newPartlyCoveredBranch = false;
+  std::vector<unsigned> fullyCoveredBranches;
+  std::vector<unsigned> partlyCoveredBranches;
+  std::vector<unsigned> targetBranches;
+
+  // symbolic branches or over-hit concrete branches
+  std::unordered_set<unsigned> invalidBranches;
+
+  // branch hit times
+  std::unordered_map<unsigned, unsigned> reachBranchCount;
+
+  // for cache
+  std::unordered_map<unsigned, std::unordered_set<signed>> validStoreValues;
+  std::unordered_map<unsigned, std::unordered_set<signed>> invalidStoreValues;
+
+  // it is used to count the index in ExecutionState.branchInfos
+  unsigned newBranchNumFromStore = 0;
+
+  // store instructions in each function
+  std::unordered_map<llvm::Function *, std::unordered_set<llvm::StoreInst *>> funcStores;
 
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);

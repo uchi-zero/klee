@@ -21,12 +21,15 @@
 #include <map>
 #include <queue>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
   class BasicBlock;
   class Function;
   class Instruction;
+  class StoreInst;
   class raw_ostream;
 }
 
@@ -71,7 +74,8 @@ namespace klee {
       NURS_RP,
       NURS_ICnt,
       NURS_CPICnt,
-      NURS_QC
+      NURS_QC,
+      CGS
     };
   };
 
@@ -316,6 +320,44 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates) override;
     bool empty() override;
     void printName(llvm::raw_ostream &os) override;
+  };
+
+  /// CGSSearcher implements Concrete Constraint Guided Search strategy.
+  /// It prioritizes states based on concrete constraints and branch dependencies.
+  class CGSSearcher final : public Searcher {
+    // branch_states have target concrete branches
+    std::vector<ExecutionState *> states, branch_states;
+
+    Executor &executor;
+    std::vector<unsigned> &TB;
+    std::vector<unsigned> &FCB;
+    std::vector<unsigned> &PCB;
+    unsigned &targetBranchNum;
+    bool &updateTargetBranch;
+    bool &newFullyCoveredBranch;
+    bool &newPartlyCoveredBranch;
+    unsigned &newBranchNumFromStore;
+    std::unordered_map<unsigned, std::unordered_set<signed>> &invalidStoreValues;
+    std::unordered_map<llvm::Function *, std::unordered_set<llvm::StoreInst *>> &funcStores;
+
+    std::unordered_map<unsigned, std::unordered_set<signed>> validStoreValues;
+
+    std::unordered_set<unsigned> branches;
+
+  public:
+    explicit CGSSearcher(Executor &executor);
+    ~CGSSearcher() override = default;
+
+    ExecutionState &selectState() override;
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) override;
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
+
+    bool isNewStoreValue(ExecutionState *state, unsigned bid, unsigned sid);
+    void handleFullyCoveredBranch(ExecutionState *current, unsigned coveredBID);
+    void handlePartlyCoveredBranch(ExecutionState *current, unsigned targetBID);
   };
 
 } // klee namespace

@@ -255,6 +255,20 @@ public:
   using base_mo_t = std::map<uint64_t, std::set<ref<Expr>>>;
   base_mo_t base_mos;
 
+  // CGS (Concrete Constraint Guided Searcher) related fields
+  struct branchInfo {
+    unsigned targetBranchID;
+    unsigned reachStoreID;
+  };
+
+  bool reachStore = false;
+  bool reachBranch = false;
+
+  std::vector<branchInfo *> branchInfos;
+
+  // store id -> store value
+  std::unordered_map<unsigned, unsigned> storeValues;
+
 public:
 #ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests

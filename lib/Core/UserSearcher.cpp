@@ -47,7 +47,8 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
                    "use NURS with Instr-Count"),
         clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt",
                    "use NURS with CallPath-Instr-Count"),
-        clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")),
+        clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost"),
+        clEnumValN(Searcher::CGS, "cgs", "use concrete constraint as guidance")),
     cl::cat(SearchCat));
 
 cl::opt<bool> UseIterativeDeepeningTimeSearch(
@@ -104,6 +105,10 @@ bool userSearcherRequiresInMemoryExecutionTree() {
   return std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end();
 }
 
+bool userSearcherRequiresCGS() {
+  return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::CGS) != CoreSearch.end());
+}
+
 } // namespace klee
 
 Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
@@ -121,6 +126,7 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
     case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount, rng); break;
     case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount, rng); break;
     case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost, rng); break;
+    case Searcher::CGS: break;  // CGS is handled separately in constructUserSearcher
   }
 
   return searcher;
@@ -129,7 +135,13 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
 Searcher *klee::constructUserSearcher(Executor &executor) {
   auto *etree =
       llvm::dyn_cast<InMemoryExecutionTree>(executor.executionTree.get());
-  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, etree);
+  Searcher *searcher;
+  if (CoreSearch[0] != Searcher::CGS) {
+    searcher = getNewSearcher(CoreSearch[0], executor.theRNG, etree);
+  }
+  else {
+    searcher = new CGSSearcher(executor);
+  }
 
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;

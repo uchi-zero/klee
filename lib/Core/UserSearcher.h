@@ -17,6 +17,7 @@ namespace klee {
   // XXX gross, should be on demand?
   bool userSearcherRequiresMD2U();
   bool userSearcherRequiresInMemoryExecutionTree();
+  bool userSearcherRequiresCGS();
 
   void initializeSearchOptions();
 
