@@ -659,7 +659,7 @@ EmpcSearcher::EmpcSearcher(
     const std::shared_ptr<Empc::InterProcDataAnalyzer> &iPDA, RNG &_rng)
     : theRNG(_rng) {
   mpcSearcherHelper = std::make_unique<Empc::SearcherHelper>(
-      iCFG, iPDA, [&]() { return this->theRNG.getInt32(); });
+      iCFG, iPDA, [&rng = theRNG]() { return rng.getInt32(); });
 }
 
 bool EmpcSearcher::empty() { return mpcSearcherHelper->empty(); }

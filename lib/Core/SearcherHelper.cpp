@@ -487,12 +487,12 @@ SearcherHelper::SearcherHelper(std::shared_ptr<InterProcGraph> _iCFG,
       parsedStates(std::make_unique<
                    DiscretePDF<ExecutionState *, ExecutionStateIDCompare>>()) {
   branchDepStateMap = std::make_unique<BranchStateMap>(
-      [&](klee::KInstIterator instIter,
-          const llvm::BasicBlock *bblock) -> bool {
+      [iPDA = this->iPDA](klee::KInstIterator instIter,
+                          const llvm::BasicBlock *bblock) -> bool {
         auto *inst = Utility::convert(instIter);
         if (!inst || !bblock)
           return false;
-        return this->iPDA->isRechable(inst, bblock->getTerminator());
+        return iPDA->isRechable(inst, bblock->getTerminator());
       });
 }
 
