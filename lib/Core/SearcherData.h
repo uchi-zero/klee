@@ -175,6 +175,7 @@ public:
   static void
   storeBasicBlock(const llvm::BasicBlock *_bblock,
                   const std::unique_ptr<BasicBlockData> &blockDataPtr);
+  static BasicBlockData *getOrCreateBasicBlockData(const llvm::BasicBlock *_bblock);
   // static void storeBasicBlock(const llvm::BasicBlock *_bblock,
   // std::unique_ptr<BasicBlockData> &&blockDataPtr) {
   // bblockMap.emplace(_bblock, blockDataPtr); }
@@ -295,6 +296,7 @@ public:
   static CallerData *getCallerData(const llvm::Instruction *_inst);
   static void storeCallerInst(const llvm::Instruction *_inst,
                               const std::unique_ptr<CallerData> &callerDataPtr);
+  static CallerData *getOrCreateCallerData(const llvm::Instruction *_inst);
 
 public:
   uint64_t id;

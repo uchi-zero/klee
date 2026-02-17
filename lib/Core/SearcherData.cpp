@@ -346,6 +346,19 @@ void BasicBlockData::storeBasicBlock(
   bblockMap[_bblock] = blockDataPtr->clone();
 }
 
+BasicBlockData *BasicBlockData::getOrCreateBasicBlockData(const llvm::BasicBlock *_bblock) {
+  std::unique_lock<std::mutex> locker(mapMutex);
+  auto it = bblockMap.find(_bblock);
+  if (it == bblockMap.end()) {
+    // Create new BasicBlockData atomically within the lock
+    auto blockDataPtr = std::make_unique<BasicBlockData>(const_cast<llvm::BasicBlock *>(_bblock));
+    BasicBlockData *rawPtr = blockDataPtr.get();
+    bblockMap[_bblock] = std::move(blockDataPtr);
+    return rawPtr;
+  }
+  return it->second.get();
+}
+
 uint64_t FunctionData::getNextIndex() {
   std::unique_lock<std::mutex> locker(indexMutex);
   return nextIndex++;
@@ -384,6 +397,19 @@ void CallerData::storeCallerInst(
     const std::unique_ptr<CallerData> &callerDataPtr) {
   std::unique_lock<std::mutex> locker(mapMutex);
   callerInstMap[_inst] = callerDataPtr->clone();
+}
+
+CallerData *CallerData::getOrCreateCallerData(const llvm::Instruction *_inst) {
+  std::unique_lock<std::mutex> locker(mapMutex);
+  auto it = callerInstMap.find(_inst);
+  if (it == callerInstMap.end()) {
+    // Create new CallerData atomically within the lock
+    auto callerDataPtr = std::make_unique<CallerData>(const_cast<llvm::Instruction *>(_inst));
+    CallerData *rawPtr = callerDataPtr.get();
+    callerInstMap[_inst] = std::move(callerDataPtr);
+    return rawPtr;
+  }
+  return it->second.get();
 }
 } // namespace Empc
 } // namespace klee
@@ -476,11 +502,7 @@ IntraProcDataAnalyzer::IntraProcDataAnalyzer(
         }
 
         if (handleFlag) {
-          if (!CallerData::getCallerData(&I)) {
-            auto callerDataPtr = std::make_unique<CallerData>(&I);
-            CallerData::storeCallerInst(&I, callerDataPtr);
-          }
-          auto *callerData = CallerData::getCallerData(&I);
+          auto *callerData = CallerData::getOrCreateCallerData(&I);
           callerData->paramValues = paramValues;
 
           // Add to thread pool
@@ -521,11 +543,7 @@ IntraProcDataAnalyzer::IntraProcDataAnalyzer(
     bfsVisitedBlocks.emplace(bblock);
 
     // Basic block data
-    if (!BasicBlockData::getBasicBlockData(bblock)) {
-      auto bblockDataPtr = std::make_unique<BasicBlockData>(bblock);
-      BasicBlockData::storeBasicBlock(bblock, bblockDataPtr);
-    }
-    BasicBlockData *bblockData = BasicBlockData::getBasicBlockData(bblock);
+    BasicBlockData *bblockData = BasicBlockData::getOrCreateBasicBlockData(bblock);
 
     // The terminator instruction
     llvm::Instruction *termInst = bblock->getTerminator();
@@ -537,10 +555,7 @@ IntraProcDataAnalyzer::IntraProcDataAnalyzer(
       bfsQueue.push(successor);
 
       // Initialize basic block data
-      if (!BasicBlockData::getBasicBlockData(successor)) {
-        auto succBBDataPtr = std::make_unique<BasicBlockData>(successor);
-        BasicBlockData::storeBasicBlock(successor, succBBDataPtr);
-      }
+      BasicBlockData::getOrCreateBasicBlockData(successor);
     }
 
     // Analyze each instruction
