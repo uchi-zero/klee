@@ -20,22 +20,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace klee {
 llvm::cl::OptionCategory EmpcSearcherDataCat(
     "Searcher data options",
     "These options control the Empc searcher data analysis configuration.");
-
-llvm::cl::opt<unsigned> EmpcSearcherDataThreadCount(
-    "empc-searcher-data-thread-count", llvm::cl::init(0),
-    llvm::cl::desc("The thread count for thread pool used in analyzing "
-                   "searcher data analysis (default=1). Hint: since LLVM API "
-                   "doesn't support multi-thread, the value is suggested to be "
-                   "1 to avoid some data race errors."),
-    llvm::cl::cat(EmpcSearcherDataCat));
 
 llvm::cl::opt<bool> EmpcSearcherDataShowAnalyzingProgress(
     "empc-searcher-data-show-progress", llvm::cl::init(true),
@@ -72,8 +62,6 @@ bool isOriginalInstruction(const llvm::Instruction *inst) {
 
 namespace klee {
 namespace Empc {
-static std::unique_ptr<llvm::ThreadPool> StaticThreadPool;
-
 static bool isBlacklistedFunction(const llvm::Function &func) {
   if (func.empty() || func.isDeclaration() || func.isIntrinsic())
     return true;
@@ -1327,15 +1315,6 @@ IntraProcDataAnalyzer::getSuccessors(const llvm::BasicBlock *bblock) const {
 InterProcDataAnalyzer::InterProcDataAnalyzer(
     llvm::Module *_module,
     const std::unordered_map<std::string, bool> &definedFunctions) {
-  unsigned threadCount = EmpcSearcherDataThreadCount;
-  if (!threadCount) {
-    // unsigned threadCount = llvm::get_cpus();
-    // threadCount = threadCount > 1 ? (threadCount / 2) : threadCount;
-    threadCount = 1;
-  }
-  StaticThreadPool = std::make_unique<llvm::ThreadPool>(
-      llvm::hardware_concurrency(threadCount));
-
   for (auto &F : *_module) {
     auto foundIter = definedFunctions.find(F.getName().str());
     if (foundIter == definedFunctions.end() || !foundIter->second ||
@@ -1344,12 +1323,8 @@ InterProcDataAnalyzer::InterProcDataAnalyzer(
 
     auto &pda = analyzerMap[&F];
     auto &callees = callGraph[&F];
-    // pda = std::make_shared<IntraProcDataAnalyzer>(&F, callees);
-    StaticThreadPool->async(
-        [&]() { pda = std::make_shared<IntraProcDataAnalyzer>(&F, callees); });
+    pda = std::make_shared<IntraProcDataAnalyzer>(&F, callees);
   }
-
-  StaticThreadPool->wait();
 }
 
 bool InterProcDataAnalyzer::isRechable(const llvm::Instruction *startInst,
