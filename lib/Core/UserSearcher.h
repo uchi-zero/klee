@@ -17,6 +17,7 @@ class Searcher;
 // XXX gross, should be on demand?
 bool userSearcherRequiresMD2U();
 bool userSearcherRequiresInMemoryExecutionTree();
+bool userSearcherRequiresCGS();
 
 /// @brief [Empc]: The searcher is `EmpcSearcher` so it requires searcher graphs
 /// @return

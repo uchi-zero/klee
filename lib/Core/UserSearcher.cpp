@@ -54,7 +54,8 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
         /* [Empc]: Empc searcher option */
         clEnumValN(Searcher::Empc, "empc", "use Empc"),
         /* [SGS]: Subpath guided searcher */
-        clEnumValN(Searcher::SGS, "sgs", "use SGS (subpath guided searcher)")),
+        clEnumValN(Searcher::SGS, "sgs", "use SGS (subpath guided searcher)"),
+        clEnumValN(Searcher::CGS, "cgs", "use concrete constraint as guidance")),
     cl::cat(SearchCat));
 
 cl::opt<bool> UseIterativeDeepeningTimeSearch(
@@ -126,6 +127,10 @@ bool userSearcherRequiresSGS() {
          CoreSearch.end();
 }
 
+bool userSearcherRequiresCGS() {
+  return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::CGS) != CoreSearch.end());
+}
+
 } // namespace klee
 
 Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
@@ -186,6 +191,8 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
 
     searcher = new InterleavedSearcher(s);
   } break;
+  case Searcher::CGS:
+    break;  // CGS is handled separately in constructUserSearcher
   }
 
   return searcher;
@@ -211,11 +218,15 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
   auto *etree =
       llvm::dyn_cast<InMemoryExecutionTree>(executor.executionTree.get());
-  Searcher *searcher =
-      getNewSearcher(CoreSearch[0], executor.theRNG, etree,
-                     /* [Empc]: transfer the searcher ICFG */ executor.mpcICFG,
-                     /* [Empc]: transfer the searcher IPDA */ executor.mpcIPDA,
-                     /* [SGS]: transfer executor */ executor);
+  Searcher *searcher;
+  if (CoreSearch[0] == Searcher::CGS) {
+    searcher = new CGSSearcher(executor);
+  } else {
+    searcher = getNewSearcher(CoreSearch[0], executor.theRNG, etree,
+                              /* [Empc]: transfer the searcher ICFG */ executor.mpcICFG,
+                              /* [Empc]: transfer the searcher IPDA */ executor.mpcIPDA,
+                              /* [SGS]: transfer executor */ executor);
+  }
 
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
