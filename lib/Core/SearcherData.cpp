@@ -121,11 +121,13 @@ Variable::Type Variable::analyzeType(llvm::Type *preType) {
   else if (preType->isStructTy())
     return Variable::STRUCT;
   if (preType->isPointerTy()) {
+    // Opaque pointers (default in LLVM 15+) don't carry pointee type info
+    if (preType->isOpaquePointerTy())
+      return Variable::POINTER;
     llvm::Type *pointeeTy = preType->getPointerElementType();
     if (pointeeTy->isStructTy())
       return Variable::STRUCT_POINTER;
-    else
-      return Variable::POINTER;
+    return Variable::POINTER;
   } else
     return Variable::OTHER;
 }
