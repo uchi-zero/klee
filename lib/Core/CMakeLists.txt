@@ -21,6 +21,10 @@ add_library(kleeCore
   ImpliedValue.cpp
   Memory.cpp
   MemoryManager.cpp
+  SearcherLog.cpp
+  SearcherGraph.cpp
+  SearcherData.cpp
+  SearcherHelper.cpp
   Searcher.cpp
   SeedInfo.cpp
   SpecialFunctionHandler.cpp

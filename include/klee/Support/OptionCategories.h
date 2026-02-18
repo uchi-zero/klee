@@ -35,6 +35,11 @@ namespace klee {
   extern llvm::cl::OptionCategory StatsCat;
   extern llvm::cl::OptionCategory TerminationCat;
   extern llvm::cl::OptionCategory TestGenCat;
+
+  // [Empc]: Searcher logging category
+  extern llvm::cl::OptionCategory EmpcSearcherGraphCat;
+  extern llvm::cl::OptionCategory EmpcSearcherDataCat;
+  extern llvm::cl::OptionCategory EmpcSearcherLogCat;
 }
 
 #endif /* KLEE_OPTIONCATEGORIES_H */
